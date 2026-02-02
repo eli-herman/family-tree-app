@@ -1,105 +1,94 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Line } from 'react-native-svg';
 import { colors } from '../../constants';
 
 const STROKE_WIDTH = 2.5;
-const CORNER_RADIUS = 8;
+const CORNER_RADIUS = 10;
 const VINE_COLOR = colors.brown.branch;
 
-interface VineConnectorProps {
-  /** Number of children nodes to connect to */
+interface GenerationConnectorProps {
+  /** Number of children to connect to */
   childCount: number;
-  /** Width of each child node */
-  nodeWidth: number;
-  /** Gap between nodes */
-  gap: number;
-  /** Height of the vertical drop from parent */
-  dropHeight?: number;
-  /** Height of the vertical rise to children */
-  riseHeight?: number;
+  /** Total width of the children row */
+  rowWidth: number;
+  /** Height of the connector */
+  height?: number;
 }
 
 /**
- * Draws a smooth, connected vine from a single parent point
- * down to multiple children with rounded corners
+ * Draws a smooth branching connector from a single point
+ * down to multiple evenly-spaced children
  */
-export function VineConnector({
+export function GenerationConnector({
   childCount,
-  nodeWidth,
-  gap,
-  dropHeight = 24,
-  riseHeight = 20,
-}: VineConnectorProps) {
+  rowWidth,
+  height = 48,
+}: GenerationConnectorProps) {
   if (childCount === 0) return null;
 
-  // Calculate total width needed
-  const totalWidth = childCount * nodeWidth + (childCount - 1) * gap;
-  const totalHeight = dropHeight + riseHeight;
+  const centerX = rowWidth / 2;
+  const midY = height / 2;
 
-  // Center point at top
-  const centerX = totalWidth / 2;
-
-  // If only one child, draw a simple vertical line
+  // Single child - just a vertical line
   if (childCount === 1) {
     return (
-      <View style={{ width: totalWidth, height: totalHeight, alignItems: 'center' }}>
-        <Svg width={STROKE_WIDTH} height={totalHeight}>
-          <Path
-            d={`M ${STROKE_WIDTH / 2} 0 L ${STROKE_WIDTH / 2} ${totalHeight}`}
+      <View style={[styles.container, { width: rowWidth, height }]}>
+        <Svg width={rowWidth} height={height}>
+          <Line
+            x1={centerX}
+            y1={0}
+            x2={centerX}
+            y2={height}
             stroke={VINE_COLOR}
             strokeWidth={STROKE_WIDTH}
             strokeLinecap="round"
-            fill="none"
           />
         </Svg>
       </View>
     );
   }
 
-  // Calculate x positions for each child (center of each node)
-  const childPositions: number[] = [];
-  for (let i = 0; i < childCount; i++) {
-    const x = nodeWidth / 2 + i * (nodeWidth + gap);
-    childPositions.push(x);
-  }
+  // Calculate spacing - children are evenly distributed across rowWidth
+  const spacing = rowWidth / childCount;
+  const firstChildX = spacing / 2;
+  const lastChildX = rowWidth - spacing / 2;
 
-  // Build the SVG path
-  // Start from center top, go down, then branch out to each child
-  const horizontalY = dropHeight;
-  const leftX = childPositions[0];
-  const rightX = childPositions[childPositions.length - 1];
+  // Build path: vertical drop, horizontal bar with rounded corners, vertical rises
+  let path = '';
 
-  let pathData = '';
+  // Start from center top, go down to mid-height
+  path += `M ${centerX} 0 `;
+  path += `L ${centerX} ${midY - CORNER_RADIUS} `;
 
-  // Main vertical drop from center
-  pathData += `M ${centerX} 0 `;
-  pathData += `L ${centerX} ${horizontalY - CORNER_RADIUS} `;
+  // Curve left
+  path += `Q ${centerX} ${midY}, ${centerX - CORNER_RADIUS} ${midY} `;
 
-  // Draw left side with rounded corner
-  pathData += `Q ${centerX} ${horizontalY} ${centerX - CORNER_RADIUS} ${horizontalY} `;
-  pathData += `L ${leftX + CORNER_RADIUS} ${horizontalY} `;
-  pathData += `Q ${leftX} ${horizontalY} ${leftX} ${horizontalY + CORNER_RADIUS} `;
-  pathData += `L ${leftX} ${totalHeight} `;
+  // Go to first child position with rounded corner down
+  path += `L ${firstChildX + CORNER_RADIUS} ${midY} `;
+  path += `Q ${firstChildX} ${midY}, ${firstChildX} ${midY + CORNER_RADIUS} `;
+  path += `L ${firstChildX} ${height} `;
 
-  // Go back to center and draw right side
-  pathData += `M ${centerX} ${horizontalY - CORNER_RADIUS} `;
-  pathData += `Q ${centerX} ${horizontalY} ${centerX + CORNER_RADIUS} ${horizontalY} `;
-  pathData += `L ${rightX - CORNER_RADIUS} ${horizontalY} `;
-  pathData += `Q ${rightX} ${horizontalY} ${rightX} ${horizontalY + CORNER_RADIUS} `;
-  pathData += `L ${rightX} ${totalHeight} `;
+  // Back to center, curve right
+  path += `M ${centerX} ${midY - CORNER_RADIUS} `;
+  path += `Q ${centerX} ${midY}, ${centerX + CORNER_RADIUS} ${midY} `;
 
-  // Draw drops for middle children
+  // Go to last child position with rounded corner down
+  path += `L ${lastChildX - CORNER_RADIUS} ${midY} `;
+  path += `Q ${lastChildX} ${midY}, ${lastChildX} ${midY + CORNER_RADIUS} `;
+  path += `L ${lastChildX} ${height} `;
+
+  // Add vertical lines for middle children
   for (let i = 1; i < childCount - 1; i++) {
-    const x = childPositions[i];
-    pathData += `M ${x} ${horizontalY} L ${x} ${totalHeight} `;
+    const x = firstChildX + i * spacing;
+    path += `M ${x} ${midY} L ${x} ${height} `;
   }
 
   return (
-    <View style={{ width: totalWidth, height: totalHeight }}>
-      <Svg width={totalWidth} height={totalHeight}>
+    <View style={[styles.container, { width: rowWidth, height }]}>
+      <Svg width={rowWidth} height={height}>
         <Path
-          d={pathData}
+          d={path}
           stroke={VINE_COLOR}
           strokeWidth={STROKE_WIDTH}
           strokeLinecap="round"
@@ -112,29 +101,36 @@ export function VineConnector({
 }
 
 interface SpouseConnectorProps {
-  /** Width of the connection */
   width: number;
 }
 
 /**
- * Horizontal connector between spouses with rounded ends
+ * Horizontal connector between spouses
  */
 export function SpouseConnector({ width }: SpouseConnectorProps) {
-  const height = STROKE_WIDTH;
-
   return (
-    <View style={{ width, height, justifyContent: 'center' }}>
-      <Svg width={width} height={height}>
-        <Path
-          d={`M 0 ${height / 2} L ${width} ${height / 2}`}
+    <View style={[styles.spouseContainer, { width }]}>
+      <Svg width={width} height={STROKE_WIDTH}>
+        <Line
+          x1={0}
+          y1={STROKE_WIDTH / 2}
+          x2={width}
+          y2={STROKE_WIDTH / 2}
           stroke={VINE_COLOR}
           strokeWidth={STROKE_WIDTH}
           strokeLinecap="round"
-          fill="none"
         />
       </Svg>
     </View>
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+  },
+  spouseContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

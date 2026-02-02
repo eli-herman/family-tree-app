@@ -1,35 +1,38 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TreeNode, VineConnector, SpouseConnector } from '../../src/components/tree';
+import { TreeNode, GenerationConnector, SpouseConnector } from '../../src/components/tree';
 import { colors, spacing } from '../../src/constants';
 import { mockFamilyMembers } from '../../src/utils/mockData';
 import { FamilyMember } from '../../src/types';
-
-const NODE_SIZES = {
-  normal: 100,
-  small: 80,
-  tiny: 64,
-};
 
 const GAP = spacing.md; // 16px gap between nodes
 
 export default function TreeScreen() {
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
+  const [rowWidths, setRowWidths] = useState<{ [key: string]: number }>({});
 
   const handleMemberPress = (member: FamilyMember) => {
     setSelectedMember(member);
   };
 
+  const handleRowLayout = (rowKey: string) => (event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    setRowWidths((prev) => ({ ...prev, [rowKey]: width }));
+  };
+
   // Group members by generation
   const grandparents = mockFamilyMembers.filter(
-    (m) => m.relationships.some((r) => r.type === 'child') &&
-           !m.relationships.some((r) => r.type === 'parent')
+    (m) =>
+      m.relationships.some((r) => r.type === 'child') &&
+      !m.relationships.some((r) => r.type === 'parent')
   );
 
   const parents = mockFamilyMembers.filter(
-    (m) => m.relationships.some((r) => r.type === 'parent') &&
-           (m.relationships.some((r) => r.type === 'child') || m.relationships.some((r) => r.type === 'spouse'))
+    (m) =>
+      m.relationships.some((r) => r.type === 'parent') &&
+      (m.relationships.some((r) => r.type === 'child') ||
+        m.relationships.some((r) => r.type === 'spouse'))
   );
 
   const children = mockFamilyMembers.filter(
@@ -46,9 +49,6 @@ export default function TreeScreen() {
   const grandparentsScale = getScale(grandparents.length);
   const parentsScale = getScale(parents.length);
   const childrenScale = getScale(children.length);
-
-  // Get node width for a scale
-  const getNodeWidth = (scale: 'normal' | 'small' | 'tiny') => NODE_SIZES[scale];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -69,7 +69,10 @@ export default function TreeScreen() {
           <View style={styles.treeContainer}>
             {/* Grandparents Row */}
             {grandparents.length > 0 && (
-              <View style={styles.generation}>
+              <View
+                style={styles.generation}
+                onLayout={handleRowLayout('grandparents')}
+              >
                 {grandparents.map((member, index) => (
                   <React.Fragment key={member.id}>
                     <TreeNode
@@ -88,19 +91,20 @@ export default function TreeScreen() {
             )}
 
             {/* Connector from grandparents to parents */}
-            {grandparents.length > 0 && parents.length > 0 && (
-              <VineConnector
+            {grandparents.length > 0 && parents.length > 0 && rowWidths.parents && (
+              <GenerationConnector
                 childCount={parents.length}
-                nodeWidth={getNodeWidth(parentsScale)}
-                gap={GAP}
-                dropHeight={28}
-                riseHeight={24}
+                rowWidth={rowWidths.parents}
+                height={52}
               />
             )}
 
             {/* Parents Row */}
             {parents.length > 0 && (
-              <View style={styles.generation}>
+              <View
+                style={styles.generation}
+                onLayout={handleRowLayout('parents')}
+              >
                 {parents.map((member) => (
                   <TreeNode
                     key={member.id}
@@ -115,19 +119,20 @@ export default function TreeScreen() {
             )}
 
             {/* Connector from parents to children */}
-            {parents.length > 0 && children.length > 0 && (
-              <VineConnector
+            {parents.length > 0 && children.length > 0 && rowWidths.children && (
+              <GenerationConnector
                 childCount={children.length}
-                nodeWidth={getNodeWidth(childrenScale)}
-                gap={GAP}
-                dropHeight={28}
-                riseHeight={24}
+                rowWidth={rowWidths.children}
+                height={52}
               />
             )}
 
             {/* Children Row */}
             {children.length > 0 && (
-              <View style={styles.generation}>
+              <View
+                style={styles.generation}
+                onLayout={handleRowLayout('children')}
+              >
                 {children.map((member) => (
                   <TreeNode
                     key={member.id}
