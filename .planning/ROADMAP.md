@@ -24,6 +24,14 @@
 
 **Goal:** Create family store and wire all mock data through Zustand stores so components have reliable data sources.
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Create Herman family mock data and relationship utilities
+- [ ] 01-02-PLAN.md — Create familyStore and userStore with async loading
+- [ ] 01-03-PLAN.md — Enhance feedStore with comments and selectors
+- [ ] 01-04-PLAN.md — Wire screens to stores and initialize on mount
+
 **Requirements:**
 - DATA-01: Family store initialized with mock data
 - DATA-02: Feed store initialized with mock data
