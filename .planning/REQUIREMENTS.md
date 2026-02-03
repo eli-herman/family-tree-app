@@ -104,50 +104,50 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PAY-01 | TBD | Pending |
-| PAY-02 | TBD | Pending |
-| PAY-03 | TBD | Pending |
-| PROF-01 | TBD | Pending |
-| PROF-02 | TBD | Pending |
-| PROF-03 | TBD | Pending |
-| PROF-04 | TBD | Pending |
-| PROF-05 | TBD | Pending |
-| PROF-06 | TBD | Pending |
-| PROF-07 | TBD | Pending |
-| PROF-08 | TBD | Pending |
-| PROF-09 | TBD | Pending |
-| PROF-10 | TBD | Pending |
-| TREE-01 | TBD | Pending |
-| TREE-02 | TBD | Pending |
-| TREE-03 | TBD | Pending |
-| FEED-01 | TBD | Pending |
-| FEED-02 | TBD | Pending |
-| FEED-03 | TBD | Pending |
-| FEED-04 | TBD | Pending |
-| FEED-05 | TBD | Pending |
-| FEED-06 | TBD | Pending |
-| SETT-01 | TBD | Pending |
-| SETT-02 | TBD | Pending |
-| SETT-03 | TBD | Pending |
-| SETT-04 | TBD | Pending |
-| SETT-05 | TBD | Pending |
-| SETT-06 | TBD | Pending |
-| SETT-07 | TBD | Pending |
-| SETT-08 | TBD | Pending |
-| SETT-09 | TBD | Pending |
-| SETT-10 | TBD | Pending |
-| DATA-01 | TBD | Pending |
-| DATA-02 | TBD | Pending |
-| DATA-03 | TBD | Pending |
-| DATA-04 | TBD | Pending |
-| PLAT-01 | TBD | Pending |
-| PLAT-02 | TBD | Pending |
-| PLAT-03 | TBD | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| PAY-01 | Phase 2 | Pending |
+| PAY-02 | Phase 2 | Pending |
+| PAY-03 | Phase 2 | Pending |
+| PROF-01 | Phase 3 | Pending |
+| PROF-02 | Phase 3 | Pending |
+| PROF-03 | Phase 3 | Pending |
+| PROF-04 | Phase 3 | Pending |
+| PROF-05 | Phase 3 | Pending |
+| PROF-06 | Phase 3 | Pending |
+| PROF-07 | Phase 3 | Pending |
+| PROF-08 | Phase 3 | Pending |
+| PROF-09 | Phase 3 | Pending |
+| PROF-10 | Phase 3 | Pending |
+| TREE-01 | Phase 4 | Pending |
+| TREE-02 | Phase 4 | Pending |
+| TREE-03 | Phase 4 | Pending |
+| FEED-01 | Phase 5 | Pending |
+| FEED-02 | Phase 5 | Pending |
+| FEED-03 | Phase 5 | Pending |
+| FEED-04 | Phase 5 | Pending |
+| FEED-05 | Phase 5 | Pending |
+| FEED-06 | Phase 5 | Pending |
+| SETT-01 | Phase 6 | Pending |
+| SETT-02 | Phase 6 | Pending |
+| SETT-03 | Phase 6 | Pending |
+| SETT-04 | Phase 6 | Pending |
+| SETT-05 | Phase 7 | Pending |
+| SETT-06 | Phase 7 | Pending |
+| SETT-07 | Phase 7 | Pending |
+| SETT-08 | Phase 7 | Pending |
+| SETT-09 | Phase 7 | Pending |
+| SETT-10 | Phase 7 | Pending |
+| PLAT-01 | Phase 8 | Pending |
+| PLAT-02 | Phase 8 | Pending |
+| PLAT-03 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 37 total
-- Mapped to phases: 0
-- Unmapped: 37 (roadmap pending)
+- Mapped to phases: 37
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-02*
