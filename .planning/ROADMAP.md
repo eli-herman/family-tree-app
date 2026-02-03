@@ -27,7 +27,7 @@
 **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Create Herman family mock data and relationship utilities
+- [x] 01-01-PLAN.md — Create Herman family mock data and relationship utilities
 - [ ] 01-02-PLAN.md — Create familyStore and userStore with async loading
 - [ ] 01-03-PLAN.md — Enhance feedStore with comments and selectors
 - [ ] 01-04-PLAN.md — Wire screens to stores and initialize on mount
