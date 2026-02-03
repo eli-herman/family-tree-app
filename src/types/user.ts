@@ -17,6 +17,7 @@ export interface FamilyMember {
   birthDate?: Date;
   deathDate?: Date;
   bio?: string;
+  gender?: 'male' | 'female'; // Needed for relationship labels (e.g., "Brother-in-law" vs "Sister-in-law")
   relationships: Relationship[];
   createdBy: string;
   createdAt: Date;
