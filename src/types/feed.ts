@@ -1,3 +1,12 @@
+export interface Comment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorPhotoURL?: string;
+  text: string;
+  createdAt: Date;
+}
+
 export interface FeedItem {
   id: string;
   type: FeedItemType;
@@ -6,6 +15,7 @@ export interface FeedItem {
   authorPhotoURL?: string;
   content: FeedContent;
   hearts: string[]; // User IDs who hearted
+  comments: Comment[];
   createdAt: Date;
   updatedAt: Date;
 }
