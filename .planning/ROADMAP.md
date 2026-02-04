@@ -30,7 +30,7 @@ Plans:
 - [x] 01-01-PLAN.md — Create Herman family mock data and relationship utilities
 - [x] 01-02-PLAN.md — Create familyStore and userStore with async loading
 - [x] 01-03-PLAN.md — Enhance feedStore with comments and selectors
-- [ ] 01-04-PLAN.md — Wire screens to stores and initialize on mount
+- [x] 01-04-PLAN.md — Wire screens to stores and initialize on mount
 
 **Requirements:**
 - DATA-01: Family store initialized with mock data
@@ -230,4 +230,4 @@ Phase 8 (Verification) ←── depends on all above
 
 ---
 *Roadmap created: 2026-02-02*
-*Last updated: 2026-02-02 after initial creation*
+*Last updated: 2026-02-04 — Phase 1 complete (4/4 plans)*
