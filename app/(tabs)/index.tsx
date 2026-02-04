@@ -1,27 +1,24 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, Text } from 'react-native';
+import React from 'react';
+import { View, FlatList, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FeedItem, PromptCard, DailyVerse } from '../../src/components/feed';
 import { colors, spacing } from '../../src/constants';
-import { mockFeedItems, mockPrompts } from '../../src/utils/mockData';
+import { mockPrompts } from '../../src/utils/mockData';
 import { getDailyVerse } from '../../src/utils/dailyVerses';
-import { FeedItem as FeedItemType, Prompt } from '../../src/types';
+import { Prompt } from '../../src/types';
+import { useFeedStore, useUserStore } from '../../src/stores';
 
 export default function FeedScreen() {
-  const [feedItems, setFeedItems] = useState<FeedItemType[]>(mockFeedItems);
-  const currentUserId = 'user1';
+  const items = useFeedStore((state) => state.items);
+  const toggleHeart = useFeedStore((state) => state.toggleHeart);
+  const isLoading = useFeedStore((state) => state.isLoading);
+  const currentMemberId = useUserStore((state) => state.currentMemberId);
   const dailyVerse = getDailyVerse();
 
   const handleHeart = (itemId: string) => {
-    setFeedItems((items) =>
-      items.map((item) => {
-        if (item.id !== itemId) return item;
-        const hearts = item.hearts.includes(currentUserId)
-          ? item.hearts.filter((id) => id !== currentUserId)
-          : [...item.hearts, currentUserId];
-        return { ...item, hearts };
-      })
-    );
+    if (currentMemberId) {
+      toggleHeart(itemId, currentMemberId);
+    }
   };
 
   const handlePromptRespond = (prompt: Prompt) => {
@@ -42,16 +39,24 @@ export default function FeedScreen() {
     <PromptCard prompt={mockPrompts[0]} onRespond={handlePromptRespond} />
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ActivityIndicator size="large" color={colors.primary.base} style={styles.loader} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <FlatList
-        data={feedItems}
+        data={items}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <FeedItem
             item={item}
             onHeart={handleHeart}
-            currentUserId={currentUserId}
+            currentUserId={currentMemberId || ''}
           />
         )}
         ListHeaderComponent={renderHeader}
@@ -87,5 +92,9 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingBottom: spacing.xl,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
   },
 });
