@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, LayoutChangeEvent } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, LayoutChangeEvent, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TreeNode, GenerationConnector, SpouseConnector } from '../../src/components/tree';
 import { colors, spacing } from '../../src/constants';
-import { mockFamilyMembers } from '../../src/utils/mockData';
 import { FamilyMember } from '../../src/types';
+import { useFamilyStore } from '../../src/stores';
 
 const GAP = spacing.md; // 16px gap between nodes
 
 export default function TreeScreen() {
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const [rowWidths, setRowWidths] = useState<{ [key: string]: number }>({});
+  const getMembersByGeneration = useFamilyStore((state) => state.getMembersByGeneration);
+  const isLoading = useFamilyStore((state) => state.isLoading);
 
   const handleMemberPress = (member: FamilyMember) => {
     setSelectedMember(member);
@@ -21,23 +23,10 @@ export default function TreeScreen() {
     setRowWidths((prev) => ({ ...prev, [rowKey]: width }));
   };
 
-  // Group members by generation
-  const grandparents = mockFamilyMembers.filter(
-    (m) =>
-      m.relationships.some((r) => r.type === 'child') &&
-      !m.relationships.some((r) => r.type === 'parent')
-  );
-
-  const parents = mockFamilyMembers.filter(
-    (m) =>
-      m.relationships.some((r) => r.type === 'parent') &&
-      (m.relationships.some((r) => r.type === 'child') ||
-        m.relationships.some((r) => r.type === 'spouse'))
-  );
-
-  const children = mockFamilyMembers.filter(
-    (m) => !grandparents.includes(m) && !parents.includes(m)
-  );
+  // Group members by generation using store selector
+  const grandparents = getMembersByGeneration(0);
+  const parents = getMembersByGeneration(1);
+  const children = getMembersByGeneration(2);
 
   // Calculate scale based on total members in a row
   const getScale = (count: number): 'normal' | 'small' | 'tiny' => {
@@ -49,6 +38,14 @@ export default function TreeScreen() {
   const grandparentsScale = getScale(grandparents.length);
   const parentsScale = getScale(parents.length);
   const childrenScale = getScale(children.length);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ActivityIndicator size="large" color={colors.primary.main} style={styles.loader} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -190,5 +187,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: GAP,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
   },
 });

@@ -42,7 +42,7 @@ export default function FeedScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator size="large" color={colors.primary.base} style={styles.loader} />
+        <ActivityIndicator size="large" color={colors.primary.main} style={styles.loader} />
       </SafeAreaView>
     );
   }
