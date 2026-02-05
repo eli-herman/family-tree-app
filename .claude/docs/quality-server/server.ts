@@ -72,7 +72,7 @@ app.post('/generate', async (req: Request, res: Response) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'qwen2.5-coder:14b-q4_K_M',
+        model: 'qwen2.5-coder:14b',
         prompt: `${system}\n\n${prompt}`,
         stream: false,
         format: format === 'json' ? 'json' : undefined,

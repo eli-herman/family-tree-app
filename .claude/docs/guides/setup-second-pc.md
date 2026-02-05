@@ -1,122 +1,134 @@
 # Second PC Setup Guide
 
-> Complete setup for the Quality Server on Windows 11 (192.168.1.190)
+> Complete setup for the Quality Server on Windows 11
 
 ## Overview
 
 Your Windows PC will run:
-- **Ollama** with qwen2.5-coder:32b (complex analysis)
-- **Ollama** with nomic-embed-text (embeddings)
-- **ChromaDB** for vector storage
+- **Ollama** with qwen2.5-coder:14b (code analysis, ~9GB)
+- **Ollama** with nomic-embed-text (embeddings, ~274MB)
 - **Quality API Server** (Express + WebSocket)
-- **File Watcher** for continuous QA
+- In-memory vector store (ChromaDB optional)
 
 ## Hardware Requirements
 
-| Component | Minimum | Your PC |
-|-----------|---------|---------|
-| GPU VRAM | 8GB | 8GB (RTX 4060 Ti) |
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| GPU VRAM | 8GB | 8GB+ (RTX 4060 Ti or better) |
 | RAM | 16GB | 32GB |
-| Storage | 50GB free | Plenty |
-| CPU | 8 cores | Ryzen 7 5900X |
+| Storage | 15GB free on models drive | 50GB+ |
+| CPU | 6 cores | 8+ cores |
 
-You're well over spec. The 32B model will run comfortably.
+## Completed Setup (2026-02-05)
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| Ollama | v0.15.4 | C:\Users\{user}\AppData\Local\Programs\Ollama |
+| Models | D:\ollama\models | OLLAMA_MODELS env var |
+| Quality Server | Running | C:\quality-server |
+| HTTP API | Port 4000 | http://localhost:4000 |
+| WebSocket | Port 4001 | ws://localhost:4001 |
 
 ---
 
 ## Step 1: Install Ollama
 
-1. Download Ollama for Windows: https://ollama.ai/download/windows
+**Option A: Using winget (recommended)**
+```powershell
+winget install Ollama.Ollama
+```
 
-2. Run the installer
+**Option B: Manual download**
+Download from: https://ollama.ai/download/windows
 
-3. Open PowerShell and verify:
-   ```powershell
-   ollama --version
-   ```
-
-4. Configure Ollama to accept network connections. Create/edit the environment variable:
-   ```powershell
-   # Run as Administrator
-   [System.Environment]::SetEnvironmentVariable('OLLAMA_HOST', '0.0.0.0:11434', 'Machine')
-   ```
-
-5. Restart Ollama service or reboot
+Verify installation:
+```powershell
+# May need to open new terminal after install
+ollama --version
+```
 
 ---
 
-## Step 2: Download Models
+## Step 2: Configure Models Storage (Important!)
 
-Open PowerShell and run:
+By default, Ollama stores models in `C:\Users\{user}\.ollama\models`. If C: drive has limited space, configure D: drive:
 
 ```powershell
-# Main model - 14B quantized (fits in 8GB VRAM)
-ollama pull qwen2.5-coder:14b-q4_K_M
+# Set models directory to D: drive
+SETX OLLAMA_MODELS "D:/ollama/models"
 
-# Embedding model
+# Create the directory
+mkdir D:\ollama\models
+```
+
+**Restart Ollama** (quit from system tray, reopen) for changes to take effect.
+
+---
+
+## Step 3: Download Models
+
+```powershell
+# Main coding model (9GB download, fits in 8GB VRAM)
+ollama pull qwen2.5-coder:14b
+
+# Embedding model (274MB)
 ollama pull nomic-embed-text
 
 # Verify
 ollama list
 ```
 
-The 14B model is ~9GB download. Embedding model is ~275MB.
-
----
-
-## Step 3: Install Node.js
-
-1. Download Node.js LTS: https://nodejs.org/
-
-2. Verify:
-   ```powershell
-   node --version   # Should be 18+
-   npm --version
-   ```
-
----
-
-## Step 4: Install Python (for ChromaDB)
-
-1. Download Python 3.11: https://www.python.org/downloads/
-
-2. During install, check "Add Python to PATH"
-
-3. Verify:
-   ```powershell
-   python --version
-   pip --version
-   ```
-
----
-
-## Step 5: Install ChromaDB
-
-```powershell
-pip install chromadb
-
-# Verify
-python -c "import chromadb; print(chromadb.__version__)"
+Expected output:
+```
+NAME                       ID              SIZE      MODIFIED
+qwen2.5-coder:14b          9ec8897f747e    9.0 GB    ...
+nomic-embed-text:latest    0a109f422b47    274 MB    ...
 ```
 
 ---
 
-## Step 6: Create Quality Server Directory
+## Step 4: Install Node.js
+
+**Option A: Using winget**
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+**Option B: Manual download**
+Download from: https://nodejs.org/
+
+Verify:
+```powershell
+node --version   # Should be 18+
+npm --version
+```
+
+---
+
+## Step 5: Create Quality Server Directory
 
 ```powershell
 mkdir C:\quality-server
 cd C:\quality-server
-npm init -y
 ```
+
+Copy the server files from the repo:
+- `.claude/docs/quality-server/server.ts`
+- `.claude/docs/quality-server/package.json`
+- `.claude/docs/quality-server/tsconfig.json`
+
+Or create manually (see Step 6).
 
 ---
 
-## Step 7: Install Dependencies
+## Step 6: Install Dependencies
 
 ```powershell
-npm install express ws cors chromadb ollama chokidar
-npm install -D typescript @types/express @types/ws @types/cors ts-node
+cd C:\quality-server
+npm install
 ```
+
+This installs: express, ws, cors, chokidar, typescript, ts-node
 
 ---
 
