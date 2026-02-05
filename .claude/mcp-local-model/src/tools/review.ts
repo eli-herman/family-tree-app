@@ -62,7 +62,7 @@ export async function reviewApproachHandler(params: ReviewApproachParams) {
   }
 
   // Route to determine which model to use
-  const routing = routeTask({ type: "review_approach" });
+  const routing = await routeTask({ type: "review_approach" });
   events.emit("route:decision", { model: routing.target, reason: routing.reason });
 
   const prompt = TASK_PROMPTS.reviewApproach(goal, approach, context, existingCode);
@@ -250,7 +250,7 @@ export async function reviewCodeHandler(params: ReviewCodeParams) {
   }
 
   // Route to determine which model to use
-  const routing = routeTask({
+  const routing = await routeTask({
     type: "review_code",
     contentSize: codeToReview.length,
   });

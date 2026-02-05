@@ -9,6 +9,8 @@ interface CacheEntry {
 interface FileCacheOptions {
   maxSize: number;
   ttlMs: number;
+  onHit?: (key: string) => void;
+  onMiss?: (key: string) => void;
 }
 
 export class FileCache {
@@ -36,6 +38,7 @@ export class FileCache {
           if (mtime === entry.mtime) {
             // Update access time and return cached content
             entry.accessTime = now;
+            this.options.onHit?.(filepath);
             return entry.content;
           }
           // File was modified, invalidate cache
@@ -46,6 +49,9 @@ export class FileCache {
         }
       }
     }
+
+    // Cache miss
+    this.options.onMiss?.(filepath);
 
     // Read file and cache it
     const content = await readFile(filepath, "utf-8");

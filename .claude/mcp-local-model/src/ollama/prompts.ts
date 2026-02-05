@@ -52,6 +52,28 @@ RULES:
 - Be specific about line numbers and issues
 - Provide concrete fixes, not vague suggestions
 - Return ONLY valid JSON`,
+
+  handoff: `You are a session handoff summarizer. You create concise summaries for developers switching between devices.
+RULES:
+- Be concise: 3-5 sentences max
+- Focus on: what changed, current state, what to do next
+- Never add conversational text or greetings
+- Use plain text, no markdown`,
+
+  commitMsg: `You are a conventional commit message generator. You create commit messages following the conventional commits specification.
+RULES:
+- Return ONLY valid JSON with subject, body, and type fields
+- Type must be one of: feat, fix, docs, chore, refactor, test, style, perf, ci, build
+- Subject must be imperative mood, lowercase, no period, max 72 chars
+- Body is optional, explains WHY not WHAT
+- Never add explanations outside the JSON`,
+
+  docCheck: `You are a documentation validator. You compare documentation claims against actual codebase structure.
+RULES:
+- Return ONLY valid JSON with an issues array
+- Each issue has: severity (error/warning/info), message, and optional line number
+- Focus on: incorrect file paths, missing exports, outdated structure descriptions
+- Be factual and specific`,
 };
 
 // Task-specific prompt templates
@@ -228,6 +250,72 @@ OUTPUT (JSON only):
   "missing_considerations": ["..."],
   "recommended_changes": ["..."],
   "summary": "1-2 sentence verdict explanation"
+}`,
+
+  handoffSummary: (
+    gitContext: string,
+    sessionSummary: string,
+    activeTasks: string[],
+    blockers: string[],
+    nextSteps: string[]
+  ) => `
+Summarize this session for a developer switching devices. Be concise (3-5 sentences).
+
+GIT CONTEXT:
+${gitContext}
+
+SESSION SUMMARY:
+${sessionSummary || "No session summary provided."}
+
+ACTIVE TASKS:
+${activeTasks.length > 0 ? activeTasks.join("\n") : "None"}
+
+BLOCKERS:
+${blockers.length > 0 ? blockers.join("\n") : "None"}
+
+NEXT STEPS:
+${nextSteps.length > 0 ? nextSteps.join("\n") : "Not specified"}
+
+Provide: what was accomplished, current state, and what to do next.`,
+
+  commitMessage: (diff: string, stagedFiles: string, context?: string) => `
+Generate a conventional commit message for these staged changes.
+
+STAGED FILES:
+${stagedFiles}
+
+${context ? `CONTEXT: ${context}\n` : ""}
+DIFF:
+\`\`\`
+${diff}
+\`\`\`
+
+OUTPUT (JSON only):
+{
+  "type": "feat|fix|docs|chore|refactor|test|style|perf|ci|build",
+  "subject": "imperative lowercase description (max 72 chars)",
+  "body": "optional explanation of WHY (not WHAT)"
+}`,
+
+  docCheck: (docContent: string, actualStructure: string) => `
+Compare this documentation against the actual codebase structure.
+Flag any claims that don't match reality.
+
+DOCUMENTATION:
+\`\`\`
+${docContent.slice(0, 3000)}
+\`\`\`
+
+ACTUAL FILE STRUCTURE:
+\`\`\`
+${actualStructure}
+\`\`\`
+
+OUTPUT (JSON only):
+{
+  "issues": [
+    { "severity": "error|warning|info", "message": "description of mismatch", "line": number_or_null }
+  ]
 }`,
 
   reviewCode: (

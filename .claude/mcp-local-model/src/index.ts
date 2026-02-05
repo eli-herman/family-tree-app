@@ -18,7 +18,10 @@ import {
   reviewCodeTool,
   reviewCodeHandler,
 } from "./tools/review.js";
-import { config } from "./config.js";
+import { handoffTool, handoffHandler } from "./tools/handoff.js";
+import { commitMsgTool, commitMsgHandler } from "./tools/commit-msg.js";
+import { docCheckTool, docCheckHandler } from "./tools/doc-check.js";
+import { config, validateConfig } from "./config.js";
 import { events } from "./events.js";
 
 const server = new Server(
@@ -44,6 +47,9 @@ const tools = [
   searchTool,
   reviewApproachTool,
   reviewCodeTool,
+  handoffTool,
+  commitMsgTool,
+  docCheckTool,
 ];
 
 const handlers: Record<string, (params: any) => Promise<any>> = {
@@ -56,6 +62,9 @@ const handlers: Record<string, (params: any) => Promise<any>> = {
   local_search: searchHandler,
   local_review_approach: reviewApproachHandler,
   local_review_code: reviewCodeHandler,
+  local_handoff: handoffHandler,
+  local_commit_msg: commitMsgHandler,
+  local_doc_check: docCheckHandler,
 };
 
 // List available tools
@@ -115,6 +124,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start server
 async function main() {
+  // Validate config on startup
+  const configWarnings = validateConfig();
+  if (configWarnings.length > 0) {
+    console.error(`[Config] Warnings:`);
+    for (const w of configWarnings) {
+      console.error(`  - ${w}`);
+    }
+  }
+
   // Start dashboard WebSocket server if enabled
   if (config.dashboard?.enabled) {
     events.start(config.dashboard.wsPort);
@@ -123,10 +141,11 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error(`Local Model MCP Server running`);
+  console.error(`Local Model MCP Server running (${tools.length} tools)`);
   console.error(`  Local model: ${config.ollama.model}`);
   console.error(`  Remote server: ${config.remote?.host || 'not configured'}`);
   console.error(`  Dashboard WebSocket: ${config.dashboard?.enabled ? `ws://localhost:${config.dashboard.wsPort}` : 'disabled'}`);
+  console.error(`  Cache: ${config.cache.enabled ? 'enabled' : 'disabled'} (files: ${config.cache.fileMaxSize}, ollama: ${config.cache.ollamaMaxSize})`);
 }
 
 main().catch(console.error);

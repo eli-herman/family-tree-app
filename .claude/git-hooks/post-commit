@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# post-commit hook: Auto-generate HANDOFF.md with local Ollama summary
+# Works on Mac + Windows (Git Bash). Requires jq for safe JSON.
+
+set -euo pipefail
+
+# Skip if this is our own HANDOFF.md commit (prevent infinite loop)
+LAST_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "")
+if [[ "$LAST_MSG" == "chore: update HANDOFF.md"* ]]; then
+  exit 0
+fi
+
+# Gather git context
+REPO_ROOT=$(git rev-parse --show-toplevel)
+COMMIT_HASH=$(git rev-parse --short HEAD)
+FULL_HASH=$(git rev-parse HEAD)
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+COMMIT_MSG=$(git log -1 --pretty=%B)
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+DIFF_STAT=$(git diff-tree --stat --no-commit-id "$FULL_HASH" 2>/dev/null || echo "No changes")
+CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r "$FULL_HASH" 2>/dev/null || echo "")
+DEVICE=$(hostname)
+
+# Build the file list for YAML
+FILES_YAML=""
+while IFS= read -r file; do
+  [ -z "$file" ] && continue
+  FILES_YAML="${FILES_YAML}\n- ${file}"
+done <<< "$CHANGED_FILES"
+
+# Try to get AI summary from local Ollama (12s timeout)
+AI_SUMMARY="_Ollama unavailable - template only._"
+
+if command -v jq &>/dev/null; then
+  # Build prompt with context
+  PROMPT_TEXT="Summarize this git commit for a developer switching devices. Be concise (3-5 sentences).
+
+Commit: ${COMMIT_HASH} on branch ${BRANCH}
+Message: ${COMMIT_MSG}
+Changes:
+${DIFF_STAT}
+
+Files changed:
+${CHANGED_FILES}
+
+Provide: what changed, why it matters, and what to do next."
+
+  # Use jq for safe JSON construction (handles special chars, newlines)
+  JSON_PAYLOAD=$(jq -n \
+    --arg model "qwen2.5-coder:7b" \
+    --arg prompt "$PROMPT_TEXT" \
+    '{model: $model, prompt: $prompt, stream: false, options: {temperature: 0.3, num_predict: 256}}')
+
+  # Call Ollama with timeout
+  OLLAMA_RESPONSE=$(curl -s --max-time 12 \
+    -X POST http://localhost:11434/api/generate \
+    -H "Content-Type: application/json" \
+    -d "$JSON_PAYLOAD" 2>/dev/null || echo "")
+
+  if [ -n "$OLLAMA_RESPONSE" ]; then
+    EXTRACTED=$(echo "$OLLAMA_RESPONSE" | jq -r '.response // empty' 2>/dev/null || echo "")
+    if [ -n "$EXTRACTED" ]; then
+      AI_SUMMARY="$EXTRACTED"
+    fi
+  fi
+fi
+
+# Write HANDOFF.md
+cat > "${REPO_ROOT}/HANDOFF.md" << HANDOFF_EOF
+---
+device: ${DEVICE}
+branch: ${BRANCH}
+commit: ${COMMIT_HASH}
+timestamp: "${TIMESTAMP}"
+---
+
+# Session Handoff
+
+## Summary
+Last commit: \`${COMMIT_HASH}\` on \`${BRANCH}\`
+> ${COMMIT_MSG}
+
+## Files Changed
+$(echo -e "$FILES_YAML")
+
+## Diff Stats
+\`\`\`
+${DIFF_STAT}
+\`\`\`
+
+## Active Tasks
+_Update manually or via MCP tool._
+
+## Blockers
+_None detected._
+
+## Next Steps
+_See AI Summary below for suggestions._
+
+## AI Summary
+${AI_SUMMARY}
+HANDOFF_EOF
+
+# Auto-commit HANDOFF.md (--no-verify prevents re-triggering hooks)
+git add "${REPO_ROOT}/HANDOFF.md"
+git commit --no-verify -m "chore: update HANDOFF.md [${COMMIT_HASH}]" >/dev/null 2>&1 || true

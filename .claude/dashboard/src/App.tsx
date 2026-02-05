@@ -5,8 +5,8 @@ import { HUDPanels } from './components/HUDPanel';
 import { useWebSocket, useDemoMode } from './hooks/useWebSocket';
 import './App.css';
 
-// Set to true to see simulated data, false for real connections only
-const DEMO_MODE = true;
+// Set to true to see simulated data, false for real WebSocket connections
+const DEMO_MODE = false;
 
 type ViewMode = '3d' | '2d';
 

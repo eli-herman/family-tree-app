@@ -9,6 +9,8 @@ interface CacheEntry {
 interface OllamaCacheOptions {
   maxSize: number;
   ttlMs: number;
+  onHit?: (key: string) => void;
+  onMiss?: (key: string) => void;
 }
 
 export class OllamaCache {
@@ -31,6 +33,7 @@ export class OllamaCache {
     const entry = this.cache.get(key);
 
     if (!entry) {
+      this.options.onMiss?.(key.substring(0, 12));
       return null;
     }
 
@@ -39,9 +42,11 @@ export class OllamaCache {
     // Check if TTL expired
     if (now - entry.timestamp > this.options.ttlMs) {
       this.cache.delete(key);
+      this.options.onMiss?.(key.substring(0, 12));
       return null;
     }
 
+    this.options.onHit?.(key.substring(0, 12));
     return {
       response: entry.response,
       tokensUsed: entry.tokensUsed,
