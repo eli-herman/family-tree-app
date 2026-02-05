@@ -1,4 +1,12 @@
-# Family Tree App - Development Setup Plan
+# Family Tree App - Development Setup Plan (ARCHIVED)
+
+> **NOTE:** This plan has been superseded by the detailed phase-based planning in `.planning/`.
+> See `.planning/ROADMAP.md` for the current 8-phase plan and `.planning/STATE.md` for progress.
+> Phase 1 (Data Foundation) is complete. Next up: Phase 2 (Paywall Polish).
+
+---
+
+# Original Plan (for reference)
 
 ## Current Development Environment Scan
 

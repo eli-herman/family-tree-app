@@ -1,6 +1,6 @@
 /**
  * Quality Server - Runs on Windows PC (192.168.1.190)
- * Provides: 32B model inference, embeddings, ChromaDB, file watching
+ * Provides: 14B model inference, embeddings, vector search, file watching
  *
  * To run: npx ts-node server.ts
  * Or build: tsc && node dist/server.js
@@ -63,7 +63,7 @@ app.post('/generate', async (req: Request, res: Response) => {
   const startTime = Date.now();
 
   broadcast('model:start', {
-    model: 'remote-32b',
+    model: 'qwen2.5-coder:14b',
     prompt_preview: (prompt as string).substring(0, 100) + '...'
   });
 
@@ -98,7 +98,7 @@ app.post('/generate', async (req: Request, res: Response) => {
     const tokensUsed = (data.prompt_eval_count || 0) + (data.eval_count || 0);
 
     broadcast('model:complete', {
-      model: 'remote-32b',
+      model: 'qwen2.5-coder:14b',
       tokens: tokensUsed,
       duration
     });
