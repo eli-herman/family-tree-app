@@ -1,0 +1,17 @@
+{
+  "ollama": {
+    "host": "http://localhost:11434",
+    "model": "qwen2.5-coder:7b",
+    "timeout_ms": 30000,
+    "max_retries": 2
+  },
+  "validation": {
+    "confidence_threshold": 0.7,
+    "strict_schema": true
+  },
+  "templates_dir": "./templates",
+  "logging": {
+    "level": "info",
+    "token_tracking": true
+  }
+}

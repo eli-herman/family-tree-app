@@ -40,3 +40,10 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Claude AI infrastructure
+.claude/mcp-local-model/dist/
+.claude/mcp-local-model/node_modules/
+.claude/mcp-local-model/metrics.jsonl
+.claude/dashboard/dist/
+.claude/dashboard/node_modules/
