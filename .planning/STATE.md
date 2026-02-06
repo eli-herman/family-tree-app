@@ -1,6 +1,6 @@
 # Project State: The Vine MVP Stabilization
 
-**Last updated:** 2026-02-04
+**Last updated:** 2026-02-06
 **Current phase:** Phase 1 - Data Foundation (Complete)
 **Next action:** `/gsd:plan-phase 02` (Paywall Polish)
 
@@ -9,7 +9,7 @@
 Phase: 1 of 8 (Data Foundation)
 Plan: 4 of 4 in current phase
 Status: Phase complete
-Last activity: 2026-02-04 - Completed 01-04-PLAN.md
+Last activity: 2026-02-06 - Completed quick-001-PLAN.md (tree connector bugs + pinch-to-zoom)
 
 Progress: ████░░░░░░ 50%
 
@@ -46,9 +46,14 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | 01-03 | Comments array required on FeedItem (not optional) | Simplifies type checking; empty array for posts without comments |
 | 01-03 | getComments returns empty array if item not found | Graceful handling of edge cases |
 | 01-04 | Pass currentMemberId \|\| '' to FeedItem currentUserId prop | Store type is string \| null; empty string is safe because toggleHeart is null-guarded |
+| quick-001 | FamilyConnector stem+rail+drops (not left/right branch) | Simpler SVG, robust when children cluster near couple center |
+| quick-001 | SpouseConnector height prop for vertical centering | Line at height/2; backward compat with STROKE_WIDTH default |
+| quick-001 | Ancestor branch gap 48px, couple gap 16px | Was both 8px; grandparents were crammed together |
+| quick-001 | Gesture.Simultaneous(Pan, Pinch) for tree navigation | Replaces PanResponder; dynamic minScale from layout measurement |
 
 ## Recent Activity
 
+- 2026-02-06: Completed quick-001-PLAN.md (fix tree connector bugs + grandparent spacing + pinch-to-zoom)
 - 2026-02-04: Completed 01-04-PLAN.md (wire screens to stores — phase 1 complete)
 - 2026-02-04: Completed 01-03-PLAN.md (feedStore + comments + selectors)
 - 2026-02-03: Completed 01-02-PLAN.md (familyStore + userStore)
@@ -70,10 +75,10 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-02-04T18:06:03Z
-Stopped at: Completed 01-04-PLAN.md (Phase 1 complete)
+Last session: 2026-02-06T17:33:30Z
+Stopped at: Completed quick-001-PLAN.md (tree connector bugs + pinch-to-zoom)
 Resume file: None
 
 ---
 *State initialized: 2026-02-02*
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-06*
