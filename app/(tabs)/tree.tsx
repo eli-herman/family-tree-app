@@ -1,14 +1,14 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   Text,
   Image,
   ActivityIndicator,
-  Animated,
-  PanResponder,
   LayoutChangeEvent,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TreeNode, SpouseConnector, FamilyConnector, FamilyUnitNode } from '../../src/components/tree';
 import { VineVertical } from '../../src/components/tree';
@@ -26,22 +26,64 @@ export default function TreeScreen() {
   const isLoading = useFamilyStore((state) => state.isLoading);
   const buildFamilyTree = useFamilyStore((state) => state.buildFamilyTree);
 
-  // Free-pan state
-  const pan = useRef(new Animated.ValueXY()).current;
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponderCapture: (_, gs) =>
-        Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false },
-      ),
-      onPanResponderRelease: () => {
-        pan.extractOffset();
-      },
-    }),
-  ).current;
+  // Gesture shared values
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+
+  // Layout measurement for dynamic min-scale
+  const [viewportSize, setViewportSize] = useState({ width: 1, height: 1 });
+  const [treeSize, setTreeSize] = useState({ width: 1, height: 1 });
+
+  const handleViewportLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setViewportSize({ width, height });
+  }, []);
+
+  const handleTreeLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setTreeSize({ width, height });
+  }, []);
+
+  const minScale = Math.min(
+    viewportSize.width / treeSize.width,
+    viewportSize.height / treeSize.height,
+    1,
+  ) || 0.3;
+
+  // Pan gesture
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      translateX.value = savedTranslateX.value + e.translationX;
+      translateY.value = savedTranslateY.value + e.translationY;
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    });
+
+  // Pinch gesture
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((e) => {
+      const newScale = savedScale.value * e.scale;
+      scale.value = Math.min(Math.max(newScale, minScale), 2);
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+    });
+
+  const composed = Gesture.Simultaneous(panGesture, pinchGesture);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
 
   // Measurement state for connectors
   const [ancestorRowWidth, setAncestorRowWidth] = useState(0);
@@ -120,13 +162,12 @@ export default function TreeScreen() {
         <Text style={styles.title}>Family Tree</Text>
       </View>
 
-      <View style={styles.panArea} {...panResponder.panHandlers}>
-        <Animated.View
-          style={[
-            styles.treeContainer,
-            { transform: pan.getTranslateTransform() },
-          ]}
-        >
+      <GestureDetector gesture={composed}>
+        <View style={styles.panArea} onLayout={handleViewportLayout}>
+          <Animated.View
+            style={[styles.treeContainer, animatedStyle]}
+            onLayout={handleTreeLayout}
+          >
           {/* Grandparents row: two branches side by side */}
           <View style={styles.ancestorRow} onLayout={handleAncestorRowLayout}>
             {/* Left branch: spouse1's parents → spouse1 */}
@@ -228,8 +269,9 @@ export default function TreeScreen() {
               ))}
             </View>
           )}
-        </Animated.View>
-      </View>
+          </Animated.View>
+        </View>
+      </GestureDetector>
     </SafeAreaView>
   );
 }
