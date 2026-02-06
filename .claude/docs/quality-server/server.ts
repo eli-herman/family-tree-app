@@ -10,9 +10,10 @@
  * Or build: tsc && node dist/server.js
  */
 
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
+import { randomUUID } from 'crypto';
 
 const app = express();
 const PORT = 4000;
@@ -20,8 +21,20 @@ const WS_PORT = 4001;
 const CHROMA_URL = process.env.CHROMA_URL || 'http://localhost:8000';
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 
+// Timeouts
+const GENERATE_TIMEOUT_MS = 120_000;
+const EMBED_TIMEOUT_MS = 30_000;
+const CHROMA_TIMEOUT_MS = 10_000;
+
+// Size limits
+const MAX_PROMPT_BYTES = 100 * 1024;   // 100KB
+const MAX_FILE_CONTENT_BYTES = 200 * 1024; // 200KB
+
 // ChromaDB API prefix — detected at startup (v0.4.x uses /api/v1, v0.5+ uses /api/v2)
 let chromaApiPrefix = '/api/v1';
+
+// Server start time for uptime tracking
+const serverStartTime = Date.now();
 
 // Store for WebSocket clients
 const wsClients: Set<WebSocket> = new Set();
@@ -30,12 +43,65 @@ const wsClients: Set<WebSocket> = new Set();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Broadcast to all WebSocket clients
+// ============================================
+// Request ID + Structured Logging Middleware
+// ============================================
+
+interface RequestWithId extends Request {
+  requestId: string;
+}
+
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  const r = req as RequestWithId;
+  r.requestId = randomUUID();
+  const log: Record<string, unknown> = {
+    requestId: r.requestId,
+    method: req.method,
+    path: req.path,
+    timestamp: new Date().toISOString(),
+  };
+  if (req.method === 'POST' && req.body) {
+    // Log body size but not the full body (may contain large prompts)
+    log.bodySize = JSON.stringify(req.body).length;
+  }
+  console.log(JSON.stringify(log));
+  next();
+});
+
+// ============================================
+// Input Validation Helpers
+// ============================================
+
+function validateString(value: unknown, name: string, maxBytes = MAX_PROMPT_BYTES): string | null {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return `${name} is required and must be a non-empty string`;
+  }
+  if (Buffer.byteLength(value, 'utf-8') > maxBytes) {
+    return `${name} exceeds maximum size of ${maxBytes} bytes`;
+  }
+  return null;
+}
+
+function validateArray(value: unknown, name: string): string | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return `${name} is required and must be a non-empty array`;
+  }
+  return null;
+}
+
+// ============================================
+// Broadcast to WebSocket clients
+// ============================================
+
 function broadcast(event: string, data: Record<string, unknown>) {
   const message = JSON.stringify({ event, data, timestamp: Date.now() });
   wsClients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
+      try {
+        client.send(message);
+      } catch {
+        // Dead client, will be cleaned up by ping/pong
+      }
     }
   });
 }
@@ -50,7 +116,7 @@ async function detectChromaApiVersion(): Promise<void> {
     const res = await fetch(`${CHROMA_URL}/api/v2/heartbeat`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       chromaApiPrefix = '/api/v2';
-      console.log('ChromaDB API: v2 detected');
+      console.log(JSON.stringify({ event: 'chroma_api_detected', version: 'v2' }));
       return;
     }
   } catch { /* fall through */ }
@@ -60,16 +126,17 @@ async function detectChromaApiVersion(): Promise<void> {
     const res = await fetch(`${CHROMA_URL}/api/v1/heartbeat`, { signal: AbortSignal.timeout(3000) });
     if (res.ok) {
       chromaApiPrefix = '/api/v1';
-      console.log('ChromaDB API: v1 detected');
+      console.log(JSON.stringify({ event: 'chroma_api_detected', version: 'v1' }));
       return;
     }
   } catch { /* fall through */ }
 
-  console.warn('ChromaDB not reachable — will retry on first request');
+  console.warn(JSON.stringify({ event: 'chroma_unreachable', message: 'Will retry on first request' }));
 }
 
 async function chromaFetch(path: string, options?: RequestInit): Promise<globalThis.Response> {
-  return fetch(`${CHROMA_URL}${chromaApiPrefix}${path}`, options);
+  const signal = options?.signal || AbortSignal.timeout(CHROMA_TIMEOUT_MS);
+  return fetch(`${CHROMA_URL}${chromaApiPrefix}${path}`, { ...options, signal });
 }
 
 /**
@@ -106,13 +173,24 @@ async function ensureCollection(name: string): Promise<string> {
 // Health & Status Endpoints
 // ============================================
 
-app.get('/health', async (_req: Request, res: Response) => {
+app.get('/health', async (req: Request, res: Response) => {
+  const reqId = (req as RequestWithId).requestId;
   let ollamaOk = false;
   let chromaOk = false;
+  const models: { name: string; available: boolean }[] = [];
 
   try {
     const ollamaRes = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(3000) });
-    ollamaOk = ollamaRes.ok;
+    if (ollamaRes.ok) {
+      ollamaOk = true;
+      // Verify required models are loaded
+      const tags = await ollamaRes.json() as { models: { name: string }[] };
+      const modelNames = tags.models.map((m: { name: string }) => m.name);
+      for (const required of ['qwen2.5-coder:14b', 'nomic-embed-text']) {
+        const found = modelNames.some((n: string) => n.startsWith(required));
+        models.push({ name: required, available: found });
+      }
+    }
   } catch { /* leave false */ }
 
   try {
@@ -120,19 +198,24 @@ app.get('/health', async (_req: Request, res: Response) => {
     chromaOk = chromaRes.ok;
   } catch { /* leave false */ }
 
+  const allModelsAvailable = models.length > 0 && models.every(m => m.available);
+
   res.json({
-    status: ollamaOk ? 'ok' : 'degraded',
+    status: ollamaOk && allModelsAvailable ? 'ok' : 'degraded',
+    requestId: reqId,
     timestamp: Date.now(),
     services: {
       ollama: ollamaOk,
       chromadb: chromaOk,
-    }
+    },
+    models,
   });
 });
 
 app.get('/status', (_req: Request, res: Response) => {
   res.json({
     uptime: process.uptime(),
+    uptimeMs: Date.now() - serverStartTime,
     memory: process.memoryUsage(),
     wsClients: wsClients.size,
   });
@@ -143,7 +226,22 @@ app.get('/status', (_req: Request, res: Response) => {
 // ============================================
 
 app.post('/generate', async (req: Request, res: Response) => {
+  const reqId = (req as RequestWithId).requestId;
   const { system, prompt, format } = req.body;
+
+  // Input validation
+  const promptErr = validateString(prompt, 'prompt');
+  if (promptErr) {
+    res.status(400).json({ error: promptErr, requestId: reqId });
+    return;
+  }
+
+  // Respect client-specified timeout if provided
+  const clientTimeout = parseInt(req.headers['x-timeout-ms'] as string, 10);
+  const timeout = (clientTimeout > 0 && clientTimeout <= GENERATE_TIMEOUT_MS)
+    ? clientTimeout
+    : GENERATE_TIMEOUT_MS;
+
   const startTime = Date.now();
 
   broadcast('model:start', {
@@ -157,14 +255,15 @@ app.post('/generate', async (req: Request, res: Response) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'qwen2.5-coder:14b',
-        prompt: `${system}\n\n${prompt}`,
+        prompt: system ? `${system}\n\n${prompt}` : prompt,
         stream: false,
         format: format === 'json' ? 'json' : undefined,
         options: {
           temperature: 0.1,
           num_predict: 4096,
         }
-      })
+      }),
+      signal: AbortSignal.timeout(timeout),
     });
 
     if (!response.ok) {
@@ -187,14 +286,30 @@ app.post('/generate', async (req: Request, res: Response) => {
       duration
     });
 
+    console.log(JSON.stringify({
+      event: 'generate_complete',
+      requestId: reqId,
+      tokens: tokensUsed,
+      durationMs: duration,
+    }));
+
     res.json({
       response: data.response,
       tokensUsed,
-      durationMs: duration
+      durationMs: duration,
+      requestId: reqId,
     });
   } catch (error) {
-    broadcast('model:error', { model: 'remote-32b', error: String(error) });
-    res.status(500).json({ error: String(error) });
+    const duration = Date.now() - startTime;
+    const errMsg = String(error);
+    broadcast('model:error', { model: 'qwen2.5-coder:14b', error: errMsg });
+    console.log(JSON.stringify({
+      event: 'generate_error',
+      requestId: reqId,
+      error: errMsg,
+      durationMs: duration,
+    }));
+    res.status(500).json({ error: errMsg, requestId: reqId });
   }
 });
 
@@ -203,37 +318,78 @@ app.post('/generate', async (req: Request, res: Response) => {
 // ============================================
 
 app.post('/embed', async (req: Request, res: Response) => {
+  const reqId = (req as RequestWithId).requestId;
   const { text, texts } = req.body;
+
+  // Input validation
+  if (texts) {
+    const arrErr = validateArray(texts, 'texts');
+    if (arrErr) {
+      res.status(400).json({ error: arrErr, requestId: reqId });
+      return;
+    }
+    for (let i = 0; i < texts.length; i++) {
+      const err = validateString(texts[i], `texts[${i}]`);
+      if (err) {
+        res.status(400).json({ error: err, requestId: reqId });
+        return;
+      }
+    }
+  } else {
+    const textErr = validateString(text, 'text');
+    if (textErr) {
+      res.status(400).json({ error: textErr, requestId: reqId });
+      return;
+    }
+  }
+
+  // Respect client-specified timeout if provided
+  const clientTimeout = parseInt(req.headers['x-timeout-ms'] as string, 10);
+  const perItemTimeout = (clientTimeout > 0 && clientTimeout <= EMBED_TIMEOUT_MS * 4)
+    ? clientTimeout
+    : EMBED_TIMEOUT_MS;
 
   try {
     // Handle single text or batch
-    const inputTexts = texts || [text];
-    const embeddings: number[][] = [];
+    const inputTexts: string[] = texts || [text];
+    const CONCURRENCY = 4;
+    const embeddings: number[][] = new Array(inputTexts.length);
 
-    for (const t of inputTexts) {
-      const response = await fetch(`${OLLAMA_URL}/api/embeddings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'nomic-embed-text',
-          prompt: t
+    // Process in parallel batches of CONCURRENCY
+    for (let i = 0; i < inputTexts.length; i += CONCURRENCY) {
+      const batch = inputTexts.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(
+        batch.map(async (t: string) => {
+          const response = await fetch(`${OLLAMA_URL}/api/embeddings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'nomic-embed-text',
+              prompt: t
+            }),
+            signal: AbortSignal.timeout(perItemTimeout),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Embedding error: ${response.status}`);
+          }
+
+          const data = await response.json() as { embedding: number[] };
+          return data.embedding;
         })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Embedding error: ${response.status}`);
+      );
+      for (let j = 0; j < results.length; j++) {
+        embeddings[i + j] = results[j];
       }
-
-      const data = await response.json() as { embedding: number[] };
-      embeddings.push(data.embedding);
     }
 
     res.json({
       embeddings: texts ? embeddings : undefined,
-      embedding: texts ? undefined : embeddings[0]
+      embedding: texts ? undefined : embeddings[0],
+      requestId: reqId,
     });
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    res.status(500).json({ error: String(error), requestId: reqId });
   }
 });
 
@@ -242,8 +398,29 @@ app.post('/embed', async (req: Request, res: Response) => {
 // ============================================
 
 app.post('/index', async (req: Request, res: Response) => {
+  const reqId = (req as RequestWithId).requestId;
   const { files, collection = 'codebase' } = req.body;
-  // files: [{ path: string, content: string, metadata?: object }]
+
+  // Input validation
+  const filesErr = validateArray(files, 'files');
+  if (filesErr) {
+    res.status(400).json({ error: filesErr, requestId: reqId });
+    return;
+  }
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    const pathErr = validateString(f?.path, `files[${i}].path`);
+    if (pathErr) {
+      res.status(400).json({ error: pathErr, requestId: reqId });
+      return;
+    }
+    const contentErr = validateString(f?.content, `files[${i}].content`, MAX_FILE_CONTENT_BYTES);
+    if (contentErr) {
+      res.status(400).json({ error: contentErr, requestId: reqId });
+      return;
+    }
+  }
 
   try {
     const collectionId = await ensureCollection(collection);
@@ -258,38 +435,45 @@ app.post('/index', async (req: Request, res: Response) => {
       const documents: string[] = [];
       const metadatas: Record<string, string>[] = [];
 
-      for (const file of batch) {
-        // Generate embedding via Ollama
-        const embeddingResponse = await fetch(`${OLLAMA_URL}/api/embeddings`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'nomic-embed-text',
-            prompt: file.content
+      // Generate embeddings in parallel (4-way concurrency)
+      const CONCURRENCY = 4;
+      for (let j = 0; j < batch.length; j += CONCURRENCY) {
+        const subBatch = batch.slice(j, j + CONCURRENCY);
+        const embeddingResults = await Promise.all(
+          subBatch.map(async (file: { path: string; content: string; metadata?: Record<string, unknown> }) => {
+            const embeddingResponse = await fetch(`${OLLAMA_URL}/api/embeddings`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                model: 'nomic-embed-text',
+                prompt: file.content
+              }),
+              signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
+            });
+
+            if (!embeddingResponse.ok) {
+              throw new Error(`Embedding error for ${file.path}`);
+            }
+
+            const embeddingData = await embeddingResponse.json() as { embedding: number[] };
+            return { file, embedding: embeddingData.embedding };
           })
-        });
+        );
 
-        if (!embeddingResponse.ok) {
-          throw new Error(`Embedding error for ${file.path}`);
-        }
-
-        const embeddingData = await embeddingResponse.json() as { embedding: number[] };
-
-        ids.push(file.path);
-        embeddings.push(embeddingData.embedding);
-        // ChromaDB documents have a max size; truncate if needed
-        documents.push(file.content.substring(0, 40000));
-        // ChromaDB metadata values must be string, number, or boolean
-        const meta: Record<string, string> = { path: file.path };
-        if (file.metadata) {
-          for (const [k, v] of Object.entries(file.metadata)) {
-            meta[k] = String(v);
+        for (const result of embeddingResults) {
+          ids.push(result.file.path);
+          embeddings.push(result.embedding);
+          documents.push(result.file.content.substring(0, 40000));
+          const meta: Record<string, string> = { path: result.file.path };
+          if (result.file.metadata) {
+            for (const [k, v] of Object.entries(result.file.metadata)) {
+              meta[k] = String(v);
+            }
           }
+          metadatas.push(meta);
+          indexed++;
+          broadcast('index:progress', { file: result.file.path, indexed, total: files.length });
         }
-        metadatas.push(meta);
-
-        indexed++;
-        broadcast('index:progress', { file: file.path, indexed, total: files.length });
       }
 
       // Upsert batch into ChromaDB
@@ -310,14 +494,30 @@ app.post('/index', async (req: Request, res: Response) => {
       }
     }
 
-    res.json({ indexed, total: files.length });
+    console.log(JSON.stringify({
+      event: 'index_complete',
+      requestId: reqId,
+      indexed,
+      total: files.length,
+      collection,
+    }));
+
+    res.json({ indexed, total: files.length, requestId: reqId });
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    res.status(500).json({ error: String(error), requestId: reqId });
   }
 });
 
 app.post('/search', async (req: Request, res: Response) => {
+  const reqId = (req as RequestWithId).requestId;
   const { query, collection = 'codebase', limit = 5 } = req.body;
+
+  // Input validation
+  const queryErr = validateString(query, 'query');
+  if (queryErr) {
+    res.status(400).json({ error: queryErr, requestId: reqId });
+    return;
+  }
 
   try {
     // Get query embedding from Ollama
@@ -327,7 +527,8 @@ app.post('/search', async (req: Request, res: Response) => {
       body: JSON.stringify({
         model: 'nomic-embed-text',
         prompt: query
-      })
+      }),
+      signal: AbortSignal.timeout(EMBED_TIMEOUT_MS),
     });
 
     if (!embeddingResponse.ok) {
@@ -381,22 +582,83 @@ app.post('/search', async (req: Request, res: Response) => {
 
     broadcast('search:complete', { query, results: results.length });
 
-    res.json({ results });
+    res.json({ results, requestId: reqId });
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    res.status(500).json({ error: String(error), requestId: reqId });
   }
 });
 
 // ============================================
-// QA Status (placeholder)
+// Collection Management
 // ============================================
 
-app.get('/qa/status', (_req: Request, res: Response) => {
+app.get('/collections', async (req: Request, res: Response) => {
+  const reqId = (req as RequestWithId).requestId;
+
+  try {
+    const listRes = await chromaFetch('/collections');
+    if (!listRes.ok) {
+      throw new Error(`ChromaDB list error: ${listRes.status}`);
+    }
+    const collections = await listRes.json() as Array<{ id: string; name: string; metadata: unknown }>;
+    res.json({ collections, requestId: reqId });
+  } catch (error) {
+    res.status(500).json({ error: String(error), requestId: reqId });
+  }
+});
+
+app.delete('/collections/:name', async (req: Request, res: Response) => {
+  const reqId = (req as RequestWithId).requestId;
+  const { name } = req.params;
+
+  try {
+    const delRes = await chromaFetch(`/collections/${name}`, { method: 'DELETE' });
+    if (!delRes.ok) {
+      const err = await delRes.text();
+      throw new Error(`Failed to delete collection "${name}": ${err}`);
+    }
+    console.log(JSON.stringify({ event: 'collection_deleted', requestId: reqId, name }));
+    res.json({ deleted: name, requestId: reqId });
+  } catch (error) {
+    res.status(500).json({ error: String(error), requestId: reqId });
+  }
+});
+
+// ============================================
+// QA Status (real server stats)
+// ============================================
+
+app.get('/qa/status', async (req: Request, res: Response) => {
+  const reqId = (req as RequestWithId).requestId;
+
+  let collectionCount = 0;
+  try {
+    const listRes = await chromaFetch('/collections');
+    if (listRes.ok) {
+      const collections = await listRes.json() as unknown[];
+      collectionCount = collections.length;
+    }
+  } catch { /* leave 0 */ }
+
+  const mem = process.memoryUsage();
+
   res.json({
-    lastRun: null,
-    typescript: { errors: 0, warnings: 0 },
-    eslint: { errors: 0, warnings: 0 },
-    tests: { passed: 0, failed: 0 },
+    requestId: reqId,
+    uptime: process.uptime(),
+    uptimeMs: Date.now() - serverStartTime,
+    memory: {
+      heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
+      heapTotalMB: Math.round(mem.heapTotal / 1024 / 1024),
+      rssMB: Math.round(mem.rss / 1024 / 1024),
+    },
+    models: {
+      generation: 'qwen2.5-coder:14b',
+      embedding: 'nomic-embed-text',
+    },
+    chromadb: {
+      collections: collectionCount,
+    },
+    wsClients: wsClients.size,
   });
 });
 
@@ -404,24 +666,36 @@ app.get('/qa/status', (_req: Request, res: Response) => {
 // Start Servers
 // ============================================
 
+let httpServer: ReturnType<typeof app.listen> | null = null;
+let wss: WebSocketServer | null = null;
+let pingInterval: ReturnType<typeof setInterval> | null = null;
+
 async function start() {
   // Detect ChromaDB API version
   await detectChromaApiVersion();
 
   // HTTP Server
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Quality Server HTTP running on http://0.0.0.0:${PORT}`);
+  httpServer = app.listen(PORT, '0.0.0.0', () => {
+    console.log(JSON.stringify({ event: 'http_started', port: PORT }));
   });
 
   // WebSocket Server
-  const wss = new WebSocketServer({ port: WS_PORT, host: '0.0.0.0' });
+  wss = new WebSocketServer({ port: WS_PORT, host: '0.0.0.0' });
 
   wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
+    console.log(JSON.stringify({ event: 'ws_connected', clients: wsClients.size + 1 }));
     wsClients.add(ws);
 
+    // Mark alive for ping/pong
+    (ws as any).isAlive = true;
+    ws.on('pong', () => { (ws as any).isAlive = true; });
+
     ws.on('close', () => {
-      console.log('WebSocket client disconnected');
+      wsClients.delete(ws);
+      console.log(JSON.stringify({ event: 'ws_disconnected', clients: wsClients.size }));
+    });
+
+    ws.on('error', () => {
       wsClients.delete(ws);
     });
 
@@ -433,8 +707,69 @@ async function start() {
     }));
   });
 
-  console.log(`Quality Server WebSocket running on ws://0.0.0.0:${WS_PORT}`);
+  // Ping/pong keepalive: detect dead connections every 30s
+  pingInterval = setInterval(() => {
+    wsClients.forEach(ws => {
+      if ((ws as any).isAlive === false) {
+        wsClients.delete(ws);
+        ws.terminate();
+        return;
+      }
+      (ws as any).isAlive = false;
+      ws.ping();
+    });
+  }, 30_000);
+
+  console.log(JSON.stringify({ event: 'ws_started', port: WS_PORT }));
 }
+
+// ============================================
+// Graceful Shutdown
+// ============================================
+
+async function shutdown(signal: string) {
+  console.log(JSON.stringify({ event: 'shutdown_start', signal }));
+
+  // Stop ping interval
+  if (pingInterval) {
+    clearInterval(pingInterval);
+    pingInterval = null;
+  }
+
+  // Close WebSocket connections
+  if (wss) {
+    wsClients.forEach(ws => {
+      try {
+        ws.send(JSON.stringify({
+          event: 'server:shutdown',
+          data: { reason: signal },
+          timestamp: Date.now()
+        }));
+        ws.close(1001, 'Server shutting down');
+      } catch { /* ignore */ }
+    });
+    wsClients.clear();
+
+    await new Promise<void>((resolve) => {
+      wss!.close(() => resolve());
+    });
+    wss = null;
+  }
+
+  // Drain HTTP server (stop accepting, finish in-flight)
+  if (httpServer) {
+    await new Promise<void>((resolve) => {
+      httpServer!.close(() => resolve());
+    });
+    httpServer = null;
+  }
+
+  console.log(JSON.stringify({ event: 'shutdown_complete', signal }));
+  process.exit(0);
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 start().catch(err => {
   console.error('Failed to start Quality Server:', err);

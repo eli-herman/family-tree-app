@@ -71,10 +71,10 @@ function LeftPanel() {
           tokens={stats['local-7b']?.tokens || 0}
         />
         <ModelStat
-          name="REMOTE 32B"
+          name="REMOTE 14B"
           color="#ff00ff"
-          calls={stats['remote-32b']?.calls || 0}
-          tokens={stats['remote-32b']?.tokens || 0}
+          calls={stats['remote-14b']?.calls || 0}
+          tokens={stats['remote-14b']?.tokens || 0}
         />
         <ModelStat
           name="EMBEDDINGS"

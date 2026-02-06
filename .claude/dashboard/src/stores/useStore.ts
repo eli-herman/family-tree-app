@@ -4,7 +4,7 @@ export interface AIEvent {
   id: string;
   timestamp: number;
   type: 'model:start' | 'model:complete' | 'model:error' | 'cache:hit' | 'route:decision' | 'index:progress';
-  model?: 'claude' | 'local-7b' | 'remote-32b' | 'embeddings';
+  model?: 'claude' | 'local-7b' | 'remote-14b' | 'embeddings';
   data: Record<string, unknown>;
 }
 
@@ -74,7 +74,7 @@ export const useStore = create<DashboardStore>((set) => ({
   stats: {
     'claude': { calls: 0, tokens: 0, avgDuration: 0, errors: 0, lastActive: 0 },
     'local-7b': { calls: 0, tokens: 0, avgDuration: 0, errors: 0, lastActive: 0 },
-    'remote-32b': { calls: 0, tokens: 0, avgDuration: 0, errors: 0, lastActive: 0 },
+    'remote-14b': { calls: 0, tokens: 0, avgDuration: 0, errors: 0, lastActive: 0 },
     'embeddings': { calls: 0, tokens: 0, avgDuration: 0, errors: 0, lastActive: 0 },
   },
   updateStats: (model, update) => set((state) => ({

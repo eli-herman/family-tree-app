@@ -129,7 +129,7 @@ export const NODE_POSITIONS = {
   'claude': [-4, 2, 0] as [number, number, number],
   'orchestrator': [0, 0, 0] as [number, number, number],
   'local-7b': [3, 1, 2] as [number, number, number],
-  'remote-32b': [4, 0, -2] as [number, number, number],
+  'remote-14b': [4, 0, -2] as [number, number, number],
   'embeddings': [2, -1, -3] as [number, number, number],
   'chromadb': [5, -2, -1] as [number, number, number],
 };
@@ -138,7 +138,7 @@ export const NODE_COLORS = {
   'claude': '#ff6b35',
   'orchestrator': '#00d4ff',
   'local-7b': '#00ff88',
-  'remote-32b': '#ff00ff',
+  'remote-14b': '#ff00ff',
   'embeddings': '#ffff00',
   'chromadb': '#00ffff',
 };

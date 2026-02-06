@@ -54,7 +54,40 @@ const ALWAYS_EMBEDDINGS = [
 // Cached remote health status (avoids pinging on every call)
 let remoteHealthy: boolean | null = null;
 let remoteHealthCheckedAt = 0;
-const HEALTH_CHECK_TTL_MS = 30_000; // Re-check every 30s
+const HEALTH_CHECK_TTL_MS = 5_000; // Re-check every 5s (fast recovery detection)
+
+// ============================================
+// Routing Stats
+// ============================================
+
+const routingStats = {
+  localCalls: 0,
+  remoteCalls: 0,
+  embeddingsCalls: 0,
+  fallbackToLocal: 0,
+};
+
+/** Get routing statistics for metrics reporting */
+export function getRoutingStats(): {
+  localCalls: number;
+  remoteCalls: number;
+  embeddingsCalls: number;
+  fallbackToLocal: number;
+  remoteUtilization: string;
+} {
+  const total = routingStats.localCalls + routingStats.remoteCalls + routingStats.embeddingsCalls;
+  const remoteUtilization = total > 0
+    ? ((routingStats.remoteCalls / total) * 100).toFixed(1)
+    : '0.0';
+  return {
+    ...routingStats,
+    remoteUtilization: `${remoteUtilization}%`,
+  };
+}
+
+// ============================================
+// Health Check
+// ============================================
 
 /**
  * Check if remote server is actually reachable (cached)
@@ -128,12 +161,15 @@ export async function routeTask(task: TaskInfo): Promise<RoutingDecision> {
   // 1. Embedding tasks (with local fallback)
   if (ALWAYS_EMBEDDINGS.includes(task.type)) {
     if (remoteUp) {
+      routingStats.embeddingsCalls++;
       return {
         target: 'embeddings',
         reason: 'Vector similarity search required',
         fallback: 'local',
       };
     }
+    routingStats.localCalls++;
+    routingStats.fallbackToLocal++;
     events.routeDecision(task.type, 'local', 'Remote unavailable, using local grep fallback');
     return {
       target: 'local',
@@ -144,6 +180,7 @@ export async function routeTask(task: TaskInfo): Promise<RoutingDecision> {
   // 2. Always-remote tasks (if remote actually reachable)
   if (ALWAYS_REMOTE.includes(task.type)) {
     if (remoteUp) {
+      routingStats.remoteCalls++;
       events.routeDecision(task.type, 'remote', 'Task requires deep reasoning');
       return {
         target: 'remote',
@@ -151,6 +188,8 @@ export async function routeTask(task: TaskInfo): Promise<RoutingDecision> {
         fallback: 'local',
       };
     }
+    routingStats.localCalls++;
+    routingStats.fallbackToLocal++;
     events.routeDecision(task.type, 'local', 'Remote unreachable, falling back to local 7B');
     return {
       target: 'local',
@@ -160,6 +199,7 @@ export async function routeTask(task: TaskInfo): Promise<RoutingDecision> {
 
   // 3. Always-local tasks
   if (ALWAYS_LOCAL.includes(task.type)) {
+    routingStats.localCalls++;
     return {
       target: 'local',
       reason: 'Simple task, optimize for speed',
@@ -171,6 +211,7 @@ export async function routeTask(task: TaskInfo): Promise<RoutingDecision> {
   const threshold = config.routing?.complexityThreshold || 0.7;
 
   if (complexity >= threshold && remoteUp) {
+    routingStats.remoteCalls++;
     events.routeDecision(task.type, 'remote', `Complexity ${complexity.toFixed(2)} >= ${threshold}`);
     return {
       target: 'remote',
@@ -180,6 +221,7 @@ export async function routeTask(task: TaskInfo): Promise<RoutingDecision> {
   }
 
   // 5. Default to local
+  routingStats.localCalls++;
   return {
     target: 'local',
     reason: 'Default routing (low complexity)',

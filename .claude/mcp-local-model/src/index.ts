@@ -21,6 +21,8 @@ import {
 import { handoffTool, handoffHandler } from "./tools/handoff.js";
 import { commitMsgTool, commitMsgHandler } from "./tools/commit-msg.js";
 import { docCheckTool, docCheckHandler } from "./tools/doc-check.js";
+import { connectivityTool, connectivityHandler } from "./tools/connectivity.js";
+import { indexFilesTool, indexFilesHandler } from "./tools/index-files.js";
 import { config, validateConfig } from "./config.js";
 import { events } from "./events.js";
 
@@ -50,6 +52,8 @@ const tools = [
   handoffTool,
   commitMsgTool,
   docCheckTool,
+  connectivityTool,
+  indexFilesTool,
 ];
 
 const handlers: Record<string, (params: any) => Promise<any>> = {
@@ -65,6 +69,8 @@ const handlers: Record<string, (params: any) => Promise<any>> = {
   local_handoff: handoffHandler,
   local_commit_msg: commitMsgHandler,
   local_doc_check: docCheckHandler,
+  local_connectivity: connectivityHandler,
+  local_index: indexFilesHandler,
 };
 
 // List available tools

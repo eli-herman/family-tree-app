@@ -164,7 +164,7 @@ export function useDemoMode() {
   useEffect(() => {
     setConnected(true);
 
-    const models = ['local-7b', 'remote-32b', 'embeddings', 'claude'];
+    const models = ['local-7b', 'remote-14b', 'embeddings', 'claude'];
     const eventTypes = ['model:start', 'model:complete', 'cache:hit', 'route:decision'];
 
     const interval = setInterval(() => {

@@ -1,4 +1,6 @@
 import { getMetricsSummary } from "../utils/metrics.js";
+import { getRoutingStats } from "../router.js";
+import { getCircuitBreakerState } from "../ollama/remote.js";
 
 export const metricsTool = {
   name: "local_metrics",
@@ -17,6 +19,8 @@ export const metricsTool = {
 
 export async function metricsHandler(params: { format?: "summary" | "detailed" }) {
   const summary = await getMetricsSummary();
+  const routing = getRoutingStats();
+  const circuitBreaker = getCircuitBreakerState();
 
   if (summary.totalTasks === 0) {
     return {
@@ -24,6 +28,8 @@ export async function metricsHandler(params: { format?: "summary" | "detailed" }
       data: {
         message: "No metrics recorded yet. Use the local model tools to start tracking.",
         totalTasks: 0,
+        routing,
+        circuitBreaker,
       },
     };
   }
@@ -40,6 +46,8 @@ export async function metricsHandler(params: { format?: "summary" | "detailed" }
       estimatedClaudeWouldUse: summary.totalEstimatedClaudeTokens,
       saved: summary.tokenSavings,
     },
+    routing,
+    circuitBreaker,
     byTool: summary.byTool,
   };
 
