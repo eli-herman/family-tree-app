@@ -1,26 +1,35 @@
 ---
-device: Mac.lan
+device: Elis-MacBook-Pro.local
 branch: main
-commit: a781930
-timestamp: "2026-02-06T02:38:53Z"
+commit: fc44a8d
+timestamp: "2026-02-06T17:31:50Z"
 ---
 
 # Session Handoff
 
 ## Summary
-Last commit: `a781930` on `main`
-> docs: add restart checklist for Mac Claude Code after MCP rebuild
+Last commit: `fc44a8d` on `main`
+> fix(quick-001): fix FamilyConnector SVG paths, SpouseConnector visibility, grandparent spacing
+
+- Rewrite FamilyConnector multi-child to stem + rail + drops (every child gets a vertical drop)
+- SpouseConnector accepts optional height prop; draws line at vertical center
+- Ancestor branch gap increased to 48px (was 8px); couple gap set to 16px
+- FamilyUnitNode spouse gap increased to 16px (was 8px)
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 ## Files Changed
 
-- .claude/RESTART-CHECKLIST.md
+- app/(tabs)/tree.tsx
+- src/components/tree/FamilyUnitNode.tsx
+- src/components/tree/VineConnector.tsx
 
 ## Diff Stats
 ```
- .claude/RESTART-CHECKLIST.md | 99 ++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 99 insertions(+)
+ app/(tabs)/tree.tsx                    | 340 +++++++++++++++++++++------------
+ src/components/tree/FamilyUnitNode.tsx | 143 ++++++++++++++
+ src/components/tree/VineConnector.tsx  | 102 +++++++++-
+ 3 files changed, 457 insertions(+), 128 deletions(-)
 ```
 
 ## Active Tasks
@@ -33,4 +42,4 @@ _None detected._
 _See AI Summary below for suggestions._
 
 ## AI Summary
-This commit adds a new document titled "RESTART-CHECKLIST.md" in the `.claude` directory on the main branch. The checklist is designed for developers switching devices after rebuilding MCP (Machine Learning Platform). It provides a step-by-step guide to ensure proper setup and functionality of Mac Claude Code. This documentation is crucial for maintaining consistency across development environments and preventing common issues that can arise from device changes. To proceed, developers should review the checklist before restarting their development setup.
+This commit fixes issues with SVG paths in the FamilyConnector component, improves SpouseConnector visibility, and adjusts spacing for ancestor branches and couples. It also updates the FamilyUnitNode spouse gap. These changes enhance the visual representation of family trees on devices. To ensure compatibility and functionality, developers should review these modifications and test the tree display across different devices.
