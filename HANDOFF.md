@@ -1,30 +1,37 @@
 ---
 device: Mac.lan
 branch: main
-commit: 50962ec
-timestamp: "2026-02-06T00:34:04Z"
+commit: c455912
+timestamp: "2026-02-06T01:02:54Z"
 ---
 
 # Session Handoff
 
 ## Summary
-Last commit: `50962ec` on `main`
-> docs(02): research paywall polish domain
+Last commit: `c455912` on `main`
+> fix: wire up Quality Server to ChromaDB and fix port collision
 
-Phase 02: Paywall Polish
-- Current paywall code analyzed
-- Layout issues identified
-- Standard patterns documented
-- Pitfalls catalogued
+- Add strictPort to Vite config to prevent dashboard from taking port 3334
+- Replace in-memory vector store with ChromaDB HTTP API calls (persistent RAG)
+- Auto-detect ChromaDB API version (v1 vs v2) at startup
+- Add real health checks for Ollama and ChromaDB services
+- Batch upserts (20 at a time) to avoid overwhelming Ollama embeddings
+- Add Windows deployment guide (DEPLOY-WINDOWS.md)
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 ## Files Changed
 
-- .planning/phases/02-paywall-polish/02-RESEARCH.md
+- .claude/dashboard/vite.config.ts
+- .claude/docs/quality-server/DEPLOY-WINDOWS.md
+- .claude/docs/quality-server/server.ts
 
 ## Diff Stats
 ```
- .planning/phases/02-paywall-polish/02-RESEARCH.md | 347 ++++++++++++++++++++++
- 1 file changed, 347 insertions(+)
+ .claude/dashboard/vite.config.ts              |   1 +
+ .claude/docs/quality-server/DEPLOY-WINDOWS.md | 109 +++++++++
+ .claude/docs/quality-server/server.ts         | 309 ++++++++++++++++++--------
+ 3 files changed, 327 insertions(+), 92 deletions(-)
 ```
 
 ## Active Tasks
@@ -37,4 +44,4 @@ _None detected._
 _See AI Summary below for suggestions._
 
 ## AI Summary
-This commit updates the paywall polish phase documentation by analyzing current code, identifying layout issues, documenting standard patterns, and cataloging pitfalls. It provides a comprehensive guide for developers working on the paywall feature, ensuring they understand the existing codebase and potential challenges. The changes will help streamline development and improve the overall quality of the paywall implementation.
+This commit updates the Quality Server to use ChromaDB for persistent RAG (Retrieval-Augmented Generation) instead of an in-memory vector store, resolves port collision issues by using a strict port setting in Vite, and includes auto-detection of ChromaDB API versions. It also adds real health checks for Ollama and ChromaDB services, batch upserts to avoid overwhelming Ollama embeddings, and provides a Windows deployment guide. These changes improve the server's reliability, scalability, and ease of deployment on different devices.
