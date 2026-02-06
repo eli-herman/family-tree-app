@@ -92,6 +92,33 @@ else
 fi
 echo ""
 
+# 4b. Generate device-specific .mcp.json
+echo "--- Step 4b: MCP Server Config ---"
+MCP_JSON="${REPO_ROOT}/.mcp.json"
+# Detect the right model for this device
+OLLAMA_MODEL="qwen2.5-coder:7b"
+if curl -s --max-time 3 http://localhost:11434/api/tags 2>/dev/null | grep -q "qwen2.5-coder:14b"; then
+  OLLAMA_MODEL="qwen2.5-coder:14b"
+fi
+
+cat > "$MCP_JSON" << MCPEOF
+{
+  "mcpServers": {
+    "local-model": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${REPO_ROOT}/.claude/mcp-local-model/dist/index.js"],
+      "env": {
+        "OLLAMA_HOST": "http://localhost:11434",
+        "OLLAMA_MODEL": "${OLLAMA_MODEL}"
+      }
+    }
+  }
+}
+MCPEOF
+echo "[OK] .mcp.json generated (model: ${OLLAMA_MODEL}, path: ${REPO_ROOT})"
+echo ""
+
 # 5. Generate session brief using local model
 echo "--- Step 5: Session Brief ---"
 if command -v jq &>/dev/null && command -v curl &>/dev/null; then

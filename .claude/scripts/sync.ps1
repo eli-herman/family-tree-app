@@ -98,6 +98,42 @@ if ($currentHooksPath -eq ".claude/git-hooks") {
 }
 Write-Host ""
 
+# 4b. Generate device-specific .mcp.json
+Write-Host "--- Step 4b: MCP Server Config ---" -ForegroundColor Yellow
+$McpJson = Join-Path $RepoRoot ".mcp.json"
+$DistPath = Join-Path $RepoRoot ".claude\mcp-local-model\dist\index.js"
+# Use forward slashes for the JSON (Node.js handles both)
+$DistPathForJson = $DistPath -replace '\\', '/'
+
+# Detect the right model for this device
+$OllamaModel = "qwen2.5-coder:7b"
+try {
+    $tags = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -TimeoutSec 3 -ErrorAction Stop
+    $models = $tags.models | ForEach-Object { $_.name }
+    if ($models -match "qwen2.5-coder:14b") {
+        $OllamaModel = "qwen2.5-coder:14b"
+    }
+} catch {}
+
+$mcpContent = @"
+{
+  "mcpServers": {
+    "local-model": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["$DistPathForJson"],
+      "env": {
+        "OLLAMA_HOST": "http://localhost:11434",
+        "OLLAMA_MODEL": "$OllamaModel"
+      }
+    }
+  }
+}
+"@
+Set-Content -Path $McpJson -Value $mcpContent -Encoding UTF8
+Write-Host "[OK] .mcp.json generated (model: $OllamaModel)" -ForegroundColor Green
+Write-Host ""
+
 # 5. Generate session brief using local model
 Write-Host "--- Step 5: Session Brief ---" -ForegroundColor Yellow
 try {
