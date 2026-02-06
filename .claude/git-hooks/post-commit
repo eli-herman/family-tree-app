@@ -32,6 +32,17 @@ done <<< "$CHANGED_FILES"
 AI_SUMMARY="_Ollama unavailable - template only._"
 
 if command -v jq &>/dev/null; then
+  # Auto-detect which qwen2.5-coder model is available (14b on Windows, 7b on Mac)
+  OLLAMA_MODEL="qwen2.5-coder:7b"
+  AVAILABLE_MODELS=$(curl -s --max-time 3 http://localhost:11434/api/tags 2>/dev/null | jq -r '.models[].name' 2>/dev/null || echo "")
+  if echo "$AVAILABLE_MODELS" | grep -q "qwen2.5-coder:14b"; then
+    OLLAMA_MODEL="qwen2.5-coder:14b"
+  elif echo "$AVAILABLE_MODELS" | grep -q "qwen2.5-coder:7b"; then
+    OLLAMA_MODEL="qwen2.5-coder:7b"
+  elif echo "$AVAILABLE_MODELS" | grep -q "qwen2.5-coder"; then
+    OLLAMA_MODEL=$(echo "$AVAILABLE_MODELS" | grep "qwen2.5-coder" | head -1)
+  fi
+
   # Build prompt with context
   PROMPT_TEXT="Summarize this git commit for a developer switching devices. Be concise (3-5 sentences).
 
@@ -47,7 +58,7 @@ Provide: what changed, why it matters, and what to do next."
 
   # Use jq for safe JSON construction (handles special chars, newlines)
   JSON_PAYLOAD=$(jq -n \
-    --arg model "qwen2.5-coder:7b" \
+    --arg model "$OLLAMA_MODEL" \
     --arg prompt "$PROMPT_TEXT" \
     '{model: $model, prompt: $prompt, stream: false, options: {temperature: 0.3, num_predict: 256}}')
 
