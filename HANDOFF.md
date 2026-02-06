@@ -1,37 +1,49 @@
 ---
-device: Mac.lan
+device: DESKTOP-PG6Q3A2
 branch: main
-commit: c455912
-timestamp: "2026-02-06T01:02:54Z"
+commit: 53df668
+timestamp: "2026-02-06T01:55:24Z"
 ---
 
 # Session Handoff
 
 ## Summary
-Last commit: `c455912` on `main`
-> fix: wire up Quality Server to ChromaDB and fix port collision
+Last commit: `53df668` on `main`
+> docs: add comprehensive Quality Server documentation for Mac client
 
-- Add strictPort to Vite config to prevent dashboard from taking port 3334
-- Replace in-memory vector store with ChromaDB HTTP API calls (persistent RAG)
-- Auto-detect ChromaDB API version (v1 vs v2) at startup
-- Add real health checks for Ollama and ChromaDB services
-- Batch upserts (20 at a time) to avoid overwhelming Ollama embeddings
-- Add Windows deployment guide (DEPLOY-WINDOWS.md)
+- Update DEPLOY-WINDOWS.md with actual deployment config:
+  - ChromaDB data on D: drive, Python 3.12 requirement
+  - pm2 ecosystem config for service management
+  - Troubleshooting for Python 3.14 incompatibility
+  - Complete file locations and network configuration
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+- Add MAC-CLIENT-GUIDE.md with full API reference:
+  - All HTTP endpoints with request/response examples
+  - WebSocket events documentation
+  - Architecture diagram showing Mac-to-Windows flow
+  - Connectivity tests and troubleshooting steps
+
+- Add ecosystem.config.js for pm2 service management:
+  - ChromaDB with Python 3.12 executable path
+  - Quality Server with ts-node direct execution
+  - Auto-restart and memory limits configured
+
+Deployed: 2026-02-05 on Windows PC 192.168.1.190
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ## Files Changed
 
-- .claude/dashboard/vite.config.ts
 - .claude/docs/quality-server/DEPLOY-WINDOWS.md
-- .claude/docs/quality-server/server.ts
+- .claude/docs/quality-server/MAC-CLIENT-GUIDE.md
+- .claude/docs/quality-server/ecosystem.config.js
 
 ## Diff Stats
 ```
- .claude/dashboard/vite.config.ts              |   1 +
- .claude/docs/quality-server/DEPLOY-WINDOWS.md | 109 +++++++++
- .claude/docs/quality-server/server.ts         | 309 ++++++++++++++++++--------
- 3 files changed, 327 insertions(+), 92 deletions(-)
+ .claude/docs/quality-server/DEPLOY-WINDOWS.md   | 217 +++++++++++++--
+ .claude/docs/quality-server/MAC-CLIENT-GUIDE.md | 351 ++++++++++++++++++++++++
+ .claude/docs/quality-server/ecosystem.config.js |  48 ++++
+ 3 files changed, 587 insertions(+), 29 deletions(-)
 ```
 
 ## Active Tasks
@@ -44,4 +56,4 @@ _None detected._
 _See AI Summary below for suggestions._
 
 ## AI Summary
-This commit updates the Quality Server to use ChromaDB for persistent RAG (Retrieval-Augmented Generation) instead of an in-memory vector store, resolves port collision issues by using a strict port setting in Vite, and includes auto-detection of ChromaDB API versions. It also adds real health checks for Ollama and ChromaDB services, batch upserts to avoid overwhelming Ollama embeddings, and provides a Windows deployment guide. These changes improve the server's reliability, scalability, and ease of deployment on different devices.
+_Ollama unavailable - template only._
