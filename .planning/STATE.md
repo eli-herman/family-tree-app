@@ -63,6 +63,12 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 - 2026-02-02: Requirements defined (37 total)
 - 2026-02-02: Roadmap created (8 phases)
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Fix tree connector bugs, grandparent spacing, parent connector, and add pinch-to-zoom | 2026-02-06 | 8d69343 | [001-fix-tree-connector-bugs-grandparent-spac](./quick/001-fix-tree-connector-bugs-grandparent-spac/) |
+
 ## Blockers
 
 None currently.
