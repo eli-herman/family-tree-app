@@ -1,35 +1,33 @@
 ---
 device: Elis-MacBook-Pro.local
 branch: main
-commit: fc44a8d
-timestamp: "2026-02-06T17:31:50Z"
+commit: 30002b6
+timestamp: "2026-02-06T17:32:50Z"
 ---
 
 # Session Handoff
 
 ## Summary
-Last commit: `fc44a8d` on `main`
-> fix(quick-001): fix FamilyConnector SVG paths, SpouseConnector visibility, grandparent spacing
+Last commit: `30002b6` on `main`
+> feat(quick-001): replace PanResponder with gesture-handler pan + pinch-to-zoom
 
-- Rewrite FamilyConnector multi-child to stem + rail + drops (every child gets a vertical drop)
-- SpouseConnector accepts optional height prop; draws line at vertical center
-- Ancestor branch gap increased to 48px (was 8px); couple gap set to 16px
-- FamilyUnitNode spouse gap increased to 16px (was 8px)
+- Remove RN Animated + PanResponder, use react-native-gesture-handler + reanimated
+- Gesture.Pan for single-finger drag, Gesture.Pinch for two-finger zoom
+- Gesture.Simultaneous composes pan + pinch together
+- Dynamic minScale computed from viewport/tree layout measurements (fallback 0.3)
+- Max zoom 2x, animated via useSharedValue + useAnimatedStyle
+- GestureHandlerRootView already in _layout.tsx (no change needed)
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 ## Files Changed
 
 - app/(tabs)/tree.tsx
-- src/components/tree/FamilyUnitNode.tsx
-- src/components/tree/VineConnector.tsx
 
 ## Diff Stats
 ```
- app/(tabs)/tree.tsx                    | 340 +++++++++++++++++++++------------
- src/components/tree/FamilyUnitNode.tsx | 143 ++++++++++++++
- src/components/tree/VineConnector.tsx  | 102 +++++++++-
- 3 files changed, 457 insertions(+), 128 deletions(-)
+ app/(tabs)/tree.tsx | 98 ++++++++++++++++++++++++++++++++++++++---------------
+ 1 file changed, 70 insertions(+), 28 deletions(-)
 ```
 
 ## Active Tasks
@@ -42,4 +40,4 @@ _None detected._
 _See AI Summary below for suggestions._
 
 ## AI Summary
-This commit fixes issues with SVG paths in the FamilyConnector component, improves SpouseConnector visibility, and adjusts spacing for ancestor branches and couples. It also updates the FamilyUnitNode spouse gap. These changes enhance the visual representation of family trees on devices. To ensure compatibility and functionality, developers should review these modifications and test the tree display across different devices.
+This commit updates the gesture handling in `tree.tsx` by replacing the old PanResponder with the new `react-native-gesture-handler` library for both pan and pinch-to-zoom gestures. The changes enhance the user experience by providing more intuitive and responsive interactions on touch devices. To proceed, developers should review the updated code to understand how the new gesture system works and ensure compatibility with existing components.
