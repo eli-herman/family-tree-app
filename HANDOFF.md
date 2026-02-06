@@ -74,18 +74,48 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
  12 files changed, 1248 insertions(+), 154 deletions(-)
 ```
 
-## Active Tasks
-_Update manually or via MCP tool._
+## DEPLOY ON WINDOWS (ACTION REQUIRED)
+
+The Quality Server (`server.ts`) was rewritten on Mac. You MUST deploy it on this Windows PC.
+
+### Step 1: Pull latest
+```bash
+cd C:\Users\eli\projects\family-tree-app
+git pull origin main
+```
+
+### Step 2: Copy server.ts to Quality Server location and restart
+The source of truth is `.claude/docs/quality-server/server.ts` in the repo.
+Copy it to wherever pm2 runs the quality-server process, then restart:
+```bash
+pm2 restart quality-server
+```
+
+If the server location is the repo itself (pm2 points at `.claude/docs/quality-server/server.ts`), then just `pm2 restart quality-server` after the pull.
+
+### Step 3: Run integration tests
+```bash
+bash .claude/mcp-local-model/test/integration.sh http://localhost:4000
+```
+All 12 tests should pass. If any fail, check:
+- Ollama is running with `qwen2.5-coder:14b` and `nomic-embed-text` pulled
+- ChromaDB is running on port 8000
+
+### What changed in server.ts
+- All Ollama calls now have `AbortSignal.timeout()` (no more infinite hangs)
+- All POST endpoints validate input (returns 400 instead of crashing)
+- Every request gets a UUID in logs and responses (structured JSON logging)
+- WebSocket ping/pong every 30s (dead clients get cleaned up)
+- Graceful shutdown on SIGINT/SIGTERM
+- `/health` now verifies both models are actually loaded
+- `/embed` runs 4-way parallel (was sequential)
+- New: `GET /collections`, `DELETE /collections/:name`
+- `/qa/status` returns real stats (was placeholder zeros)
+- `X-Timeout-Ms` header support
+- Fixed `remote-32b` → `qwen2.5-coder:14b` in error broadcasts
 
 ## Blockers
-_None detected._
+_None._
 
 ## Next Steps
-_See AI Summary below for suggestions._
-
-## AI Summary
-This commit hardens the Quality Server and MCP with circuit breaker, validation, and new tools. It includes request ID middleware, input validation, graceful shutdown, WebSocket ping/pong keepalive, model verification, parallel batch embeddings, and more. New MCP tools for testing connectivity and indexing local files are added. The dashboard and metrics now include routing stats and circuit breaker state. Integration tests cover all endpoints.
-
-What changed: Enhanced server and client stability with circuit breakers, validation, and new tools.
-Why it matters: Improves reliability and performance of Quality Server and MCP.
-Next steps: Review integration test results, monitor system performance, and ensure new features work as expected.
+After deploying on Windows, resume app development (Firebase auth, connecting screens to real data).
