@@ -41,6 +41,42 @@ export const mockFamilyMembers: FamilyMember[] = [
     updatedAt: new Date('2024-01-01'),
   },
 
+  // Generation 1 (Paternal Grandparents)
+  {
+    id: 'james',
+    firstName: 'James',
+    lastName: 'Herman',
+    nickname: 'Papa',
+    gender: 'male',
+    photoURL: 'https://i.pravatar.cc/150?u=james',
+    birthDate: new Date('1944-02-19'),
+    bio: 'A man of faith and hard work. Spent 40 years as a carpenter and never missed a Sunday service.',
+    relationships: [
+      { memberId: 'linda', type: 'spouse' },
+      { memberId: 'timothy', type: 'child' },
+    ],
+    createdBy: 'eli',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  },
+  {
+    id: 'linda',
+    firstName: 'Linda',
+    lastName: 'Herman',
+    nickname: 'Nana',
+    gender: 'female',
+    photoURL: 'https://i.pravatar.cc/150?u=linda',
+    birthDate: new Date('1947-09-30'),
+    bio: 'Retired schoolteacher who still tutors neighborhood kids. Famous for her Sunday pot roast.',
+    relationships: [
+      { memberId: 'james', type: 'spouse' },
+      { memberId: 'timothy', type: 'child' },
+    ],
+    createdBy: 'eli',
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  },
+
   // Generation 2 (Parents)
   {
     id: 'shelby',
@@ -74,6 +110,8 @@ export const mockFamilyMembers: FamilyMember[] = [
     birthDate: new Date('1970-11-08'),
     bio: 'Works hard, loves harder. Enjoys camping trips and teaching life lessons.',
     relationships: [
+      { memberId: 'james', type: 'parent' },
+      { memberId: 'linda', type: 'parent' },
       { memberId: 'shelby', type: 'spouse' },
       { memberId: 'ella', type: 'child' },
       { memberId: 'eli', type: 'child' },
@@ -98,6 +136,7 @@ export const mockFamilyMembers: FamilyMember[] = [
       { memberId: 'shelby', type: 'parent' },
       { memberId: 'timothy', type: 'parent' },
       { memberId: 'preston', type: 'spouse' },
+      { memberId: 'mila', type: 'child' },
     ],
     createdBy: 'eli',
     createdAt: new Date('2024-01-01'),
@@ -113,10 +152,27 @@ export const mockFamilyMembers: FamilyMember[] = [
     bio: "Ella's husband. Software engineer and board game enthusiast. Welcomed into the family with open arms.",
     relationships: [
       { memberId: 'ella', type: 'spouse' },
+      { memberId: 'mila', type: 'child' },
     ],
     createdBy: 'eli',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
+  },
+  {
+    id: 'mila',
+    firstName: 'Mila',
+    lastName: 'Fu',
+    gender: 'female',
+    photoURL: 'https://i.pravatar.cc/150?u=mila',
+    birthDate: new Date('2024-05-18'),
+    bio: "Ella and Preston's daughter. Curious, bright, and already loves music.",
+    relationships: [
+      { memberId: 'ella', type: 'parent' },
+      { memberId: 'preston', type: 'parent' },
+    ],
+    createdBy: 'ella',
+    createdAt: new Date('2024-05-18'),
+    updatedAt: new Date('2024-05-18'),
   },
   {
     id: 'eli',

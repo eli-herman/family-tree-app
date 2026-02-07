@@ -217,7 +217,7 @@ export function FamilyConnector({
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    overflow: 'visible',
   },
   spouseContainer: {
     justifyContent: 'center',

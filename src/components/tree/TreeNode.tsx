@@ -1,10 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { Avatar } from '../common';
-import { colors, typography, spacing, borderRadius } from '../../constants';
+import { colors, spacing, borderRadius } from '../../constants';
 import { FamilyMember } from '../../types';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 interface TreeNodeProps {
   member: FamilyMember;
@@ -12,20 +10,46 @@ interface TreeNodeProps {
   isSelected?: boolean;
   variant?: 'green' | 'brown' | 'branch';
   scale?: 'normal' | 'small' | 'tiny';
+  style?: ViewStyle;
 }
 
+const NODE_ASPECT = 1.28;
+const getNodeHeight = (node: number) => Math.round(node * NODE_ASPECT);
+
 const scaleConfig = {
-  normal: { node: 100, avatar: 'lg' as const, fontSize: 14, padding: spacing.md },
-  small: { node: 80, avatar: 'md' as const, fontSize: 12, padding: spacing.sm },
-  tiny: { node: 64, avatar: 'sm' as const, fontSize: 10, padding: spacing.xs },
+  normal: {
+    node: 100,
+    height: getNodeHeight(100),
+    avatar: 'lg' as const,
+    fontSize: 14,
+    padding: spacing.md,
+  },
+  small: {
+    node: 80,
+    height: getNodeHeight(80),
+    avatar: 'md' as const,
+    fontSize: 12,
+    padding: spacing.sm,
+  },
+  tiny: {
+    node: 64,
+    height: getNodeHeight(64),
+    avatar: 'sm' as const,
+    fontSize: 10,
+    padding: spacing.xs,
+  },
 };
+
+export const TREE_NODE_WIDTH = scaleConfig.normal.node;
+export const TREE_NODE_HEIGHT = scaleConfig.normal.height;
 
 export function TreeNode({
   member,
   onPress,
   isSelected,
   variant = 'green',
-  scale = 'normal'
+  scale = 'normal',
+  style,
 }: TreeNodeProps) {
   const displayName = member.nickname || member.firstName;
   const config = scaleConfig[scale];
@@ -47,12 +71,13 @@ export function TreeNode({
     <TouchableOpacity
       style={[
         styles.container,
-        isSelected && styles.selected,
-        { minWidth: config.node, padding: config.padding }
+        { width: config.node, height: config.height, padding: config.padding },
+        style,
       ]}
       onPress={() => onPress(member)}
       activeOpacity={0.8}
     >
+      {isSelected && <View pointerEvents="none" style={styles.selectedRing} />}
       <Avatar name={displayName} size={config.avatar} variant={variant} />
       <Text style={[styles.name, { fontSize: config.fontSize }]} numberOfLines={1}>
         {displayName}
@@ -98,10 +123,13 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderWidth: 1.5,
     borderColor: colors.background.tertiary,
+    position: 'relative',
   },
-  selected: {
-    borderColor: colors.primary.main,
+  selectedRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: borderRadius.lg,
     borderWidth: 2,
+    borderColor: colors.primary.main,
   },
   name: {
     fontWeight: '600',

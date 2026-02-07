@@ -1,13 +1,12 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-// @ts-ignore - getReactNativePersistence exists but types are outdated
+import { initializeAuth, getAuth, Auth } from 'firebase/auth';
+// @ts-expect-error - getReactNativePersistence is available via Metro's react-native resolution
 import { getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Firebase configuration
-// TODO: Replace with your actual Firebase config from console.firebase.google.com
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'YOUR_API_KEY',
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'YOUR_AUTH_DOMAIN',
@@ -20,8 +19,16 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Initialize Auth with persistence
-const auth = getAuth(app);
+// Initialize Auth with React Native persistence
+// Try initializeAuth first; fall back to getAuth for hot-reload safety
+let auth: Auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch {
+  auth = getAuth(app);
+}
 
 // Initialize Firestore
 const db = getFirestore(app);

@@ -5,16 +5,18 @@ import { router, Href } from 'expo-router';
 import { Avatar, Card, Button } from '../../src/components/common';
 import { colors, typography, spacing, borderRadius } from '../../src/constants';
 import { mockFamilyMembers } from '../../src/utils/mockData';
+import { useAuthStore } from '../../src/stores';
 
 export default function ProfileScreen() {
   const currentMember = mockFamilyMembers[0];
+  const { user, logout } = useAuthStore();
 
   const handleEditProfile = () => {
     console.log('Edit profile');
   };
 
   const handleLogout = () => {
-    console.log('Logout');
+    logout();
   };
 
   return (
@@ -25,9 +27,9 @@ export default function ProfileScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
-          <Avatar name={currentMember.firstName} size="xl" variant="green" />
+          <Avatar name={user?.displayName || currentMember.firstName} size="xl" variant="green" />
           <Text style={styles.name}>
-            {currentMember.nickname || `${currentMember.firstName} ${currentMember.lastName}`}
+            {user?.displayName || currentMember.nickname || `${currentMember.firstName} ${currentMember.lastName}`}
           </Text>
           {currentMember.bio && (
             <Text style={styles.bio}>{currentMember.bio}</Text>

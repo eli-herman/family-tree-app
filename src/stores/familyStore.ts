@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { FamilyMember } from '../types';
+import { FamilyMember, FamilyUnit, FamilyTreeData } from '../types';
 import { mockFamilyMembers } from '../utils/mockData';
 import { calculateRelationship as calculateRelationshipUtil } from '../utils/relationships';
 
@@ -18,6 +18,7 @@ interface FamilyState {
   getSpouseOf: (memberId: string) => FamilyMember | undefined;
   getChildrenOf: (memberId: string) => FamilyMember[];
   getParentsOf: (memberId: string) => FamilyMember[];
+  buildFamilyTree: () => FamilyTreeData | null;
 }
 
 export const useFamilyStore = create<FamilyState>((set, get) => ({
@@ -111,5 +112,69 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
       .filter((r) => r.type === 'parent')
       .map((r) => getMemberById(r.memberId))
       .filter((m): m is FamilyMember => m !== undefined);
+  },
+
+  buildFamilyTree: () => {
+    const { members, getSpouseOf, getChildrenOf, getParentsOf } = get();
+    if (members.length === 0) return null;
+
+    const buildUnit = (
+      member1: FamilyMember,
+      member2: FamilyMember,
+      depth: number,
+    ): FamilyUnit => {
+      const childrenA = getChildrenOf(member1.id);
+      const childrenB = getChildrenOf(member2.id);
+      const seen = new Set<string>();
+      const allChildren: FamilyMember[] = [];
+      for (const child of [...childrenA, ...childrenB]) {
+        if (!seen.has(child.id)) {
+          seen.add(child.id);
+          allChildren.push(child);
+        }
+      }
+      allChildren.sort((a, b) => {
+        if (!a.birthDate && !b.birthDate) return 0;
+        if (!a.birthDate) return 1;
+        if (!b.birthDate) return -1;
+        return a.birthDate.getTime() - b.birthDate.getTime();
+      });
+
+      const children: Array<FamilyUnit | FamilyMember> = allChildren.map((child) => {
+        const childSpouse = getSpouseOf(child.id);
+        if (childSpouse) {
+          return buildUnit(child, childSpouse, depth + 1);
+        }
+        return child;
+      });
+
+      return { couple: [member1, member2], children, depth };
+    };
+
+    const findParentCouple = (
+      member: FamilyMember,
+    ): [FamilyMember, FamilyMember] | null => {
+      const parents = getParentsOf(member.id);
+      if (parents.length < 2) return null;
+      return [parents[0], parents[1]];
+    };
+
+    // Find the focus couple: a married pair where at least one has parents AND children
+    const focusMember = members.find(
+      (m) =>
+        m.relationships.some((r) => r.type === 'parent') &&
+        m.relationships.some((r) => r.type === 'child') &&
+        m.relationships.some((r) => r.type === 'spouse'),
+    );
+    if (!focusMember) return null;
+
+    const focusSpouse = getSpouseOf(focusMember.id);
+    if (!focusSpouse) return null;
+
+    const centerUnit = buildUnit(focusMember, focusSpouse, 1);
+    const spouse1Parents = findParentCouple(focusMember);
+    const spouse2Parents = findParentCouple(focusSpouse);
+
+    return { spouse1Parents, spouse2Parents, centerUnit };
   },
 }));

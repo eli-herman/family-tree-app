@@ -1,18 +1,21 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, LayoutChangeEvent } from 'react-native';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
 import { TreeNode } from './TreeNode';
-import { SpouseConnector, FamilyConnector } from './VineConnector';
 import { FamilyUnit, FamilyMember, isFamilyUnit } from '../../types';
 import { spacing } from '../../constants';
 
 const GAP = spacing.md;
 const SPOUSE_GAP = spacing.md; // 16px between spouses
+const CONNECTOR_GAP = 48;
 
 interface FamilyUnitNodeProps {
   unit: FamilyUnit;
   selectedMemberId: string | null;
   onMemberPress: (member: FamilyMember) => void;
 }
+
+const getChildKey = (child: FamilyUnit | FamilyMember) =>
+  (isFamilyUnit(child) ? child.couple[0].id : child.id);
 
 const depthVariant = (depth: number): 'brown' | 'green' | 'branch' => {
   if (depth === 0) return 'brown';
@@ -25,65 +28,20 @@ export function FamilyUnitNode({
   selectedMemberId,
   onMemberPress,
 }: FamilyUnitNodeProps) {
-  const [childPositions, setChildPositions] = useState<number[]>([]);
-  const [childrenRowWidth, setChildrenRowWidth] = useState(0);
-  const [coupleWidth, setCoupleWidth] = useState(0);
-
   const variant = depthVariant(unit.depth);
 
-  const handleChildLayout = useCallback(
-    (index: number) => (event: LayoutChangeEvent) => {
-      const { x, width } = event.nativeEvent.layout;
-      const center = x + width / 2;
-      setChildPositions((prev) => {
-        const next = [...prev];
-        next[index] = center;
-        return next;
-      });
-    },
-    [],
-  );
-
-  const handleChildrenRowLayout = useCallback((event: LayoutChangeEvent) => {
-    setChildrenRowWidth(event.nativeEvent.layout.width);
-  }, []);
-
-  const handleCoupleLayout = useCallback((event: LayoutChangeEvent) => {
-    setCoupleWidth(event.nativeEvent.layout.width);
-  }, []);
-
   const [a, b] = unit.couple;
-  const coupleCenter = coupleWidth / 2;
-
-  const allMeasured =
-    unit.children.length > 0 &&
-    childPositions.length === unit.children.length &&
-    childPositions.every((p) => p !== undefined);
-
-  const connectorWidth = Math.max(coupleWidth, childrenRowWidth);
-
-  const childrenOffset =
-    childrenRowWidth < connectorWidth
-      ? (connectorWidth - childrenRowWidth) / 2
-      : 0;
-  const coupleOffset =
-    coupleWidth < connectorWidth ? (connectorWidth - coupleWidth) / 2 : 0;
-
-  const adjustedPositions = allMeasured
-    ? childPositions.map((p) => p + childrenOffset)
-    : [];
-  const adjustedCoupleCenter = coupleCenter + coupleOffset;
 
   return (
     <View style={styles.container}>
-      <View style={styles.coupleRow} onLayout={handleCoupleLayout}>
+      <View style={styles.coupleRow}>
         <TreeNode
           member={a}
           onPress={onMemberPress}
           isSelected={selectedMemberId === a.id}
           variant={variant}
         />
-        <SpouseConnector width={SPOUSE_GAP} />
+        <View style={{ width: SPOUSE_GAP }} />
         <TreeNode
           member={b}
           onPress={onMemberPress}
@@ -93,34 +51,32 @@ export function FamilyUnitNode({
       </View>
 
       {unit.children.length > 0 && (
-        <FamilyConnector
-          childPositions={adjustedPositions}
-          width={connectorWidth}
-          coupleCenter={adjustedCoupleCenter}
-          height={48}
-        />
+        <View style={{ height: CONNECTOR_GAP }} />
       )}
 
       {unit.children.length > 0 && (
-        <View style={styles.childrenRow} onLayout={handleChildrenRowLayout}>
-          {unit.children.map((child, i) => (
-            <View key={isFamilyUnit(child) ? child.couple[0].id : child.id} onLayout={handleChildLayout(i)}>
-              {isFamilyUnit(child) ? (
-                <FamilyUnitNode
-                  unit={child}
-                  selectedMemberId={selectedMemberId}
-                  onMemberPress={onMemberPress}
-                />
-              ) : (
-                <TreeNode
-                  member={child}
-                  onPress={onMemberPress}
-                  isSelected={selectedMemberId === child.id}
-                  variant={depthVariant(unit.depth + 1)}
-                />
-              )}
-            </View>
-          ))}
+        <View style={styles.childrenRow}>
+          {unit.children.map((child) => {
+            const childKey = getChildKey(child);
+            return (
+              <View key={childKey}>
+                {isFamilyUnit(child) ? (
+                  <FamilyUnitNode
+                    unit={child}
+                    selectedMemberId={selectedMemberId}
+                    onMemberPress={onMemberPress}
+                  />
+                ) : (
+                  <TreeNode
+                    member={child}
+                    onPress={onMemberPress}
+                    isSelected={selectedMemberId === child.id}
+                    variant={depthVariant(unit.depth + 1)}
+                  />
+                )}
+              </View>
+            );
+          })}
         </View>
       )}
     </View>

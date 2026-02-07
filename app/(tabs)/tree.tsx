@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -10,21 +10,226 @@ import {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TreeNode, SpouseConnector, FamilyConnector, FamilyUnitNode } from '../../src/components/tree';
-import { VineVertical } from '../../src/components/tree';
+import Svg, { Line } from 'react-native-svg';
+import { TreeNode, TREE_NODE_HEIGHT, TREE_NODE_WIDTH } from '../../src/components/tree';
 import { colors, spacing } from '../../src/constants';
-import { FamilyMember, isFamilyUnit } from '../../src/types';
+import { FamilyMember, FamilyUnit, isFamilyUnit } from '../../src/types';
 import { useFamilyStore } from '../../src/stores';
 
-const GAP = spacing.md;
 const SPOUSE_GAP = spacing['2xl']; // 48px between ancestor branches
 const COUPLE_GAP = spacing.md;     // 16px between spouses within a couple
-const CONNECTOR_HEIGHT = 48;
+const CHILD_GAP = spacing.md;
+const CONNECTOR_GAP = 48;
+const LAYOUT_PADDING = 48;
+const ZOOM_IN_MULTIPLIER = 3;
+const CONNECTOR_STROKE = 2.5;
+const CONNECTOR_COLOR = colors.brown.branch;
+
+type LineSeg = { x1: number; y1: number; x2: number; y2: number };
+type NodeFrame = { x: number; y: number; width: number; height: number };
+type Variant = 'brown' | 'green' | 'branch';
+type LayoutResult = {
+  width: number;
+  height: number;
+  frames: Record<string, NodeFrame>;
+  variants: Record<string, Variant>;
+};
+type TreeLayout = LayoutResult & { treeSize: { width: number; height: number } };
+
+const EMPTY_LAYOUT: TreeLayout = {
+  width: 1,
+  height: 1,
+  frames: {},
+  variants: {},
+  treeSize: { width: 1, height: 1 },
+};
+
+const depthVariant = (depth: number): Variant => {
+  if (depth === 0) return 'brown';
+  if (depth === 1) return 'green';
+  return 'branch';
+};
+
+const layoutUnit = (unit: FamilyUnit): LayoutResult => {
+  const coupleWidth = TREE_NODE_WIDTH * 2 + COUPLE_GAP;
+  const coupleHeight = TREE_NODE_HEIGHT;
+
+  const childLayouts = unit.children.map((child) => {
+    if (isFamilyUnit(child)) {
+      return layoutUnit(child);
+    }
+    return {
+      width: TREE_NODE_WIDTH,
+      height: TREE_NODE_HEIGHT,
+      frames: {
+        [child.id]: { x: 0, y: 0, width: TREE_NODE_WIDTH, height: TREE_NODE_HEIGHT },
+      },
+      variants: {
+        [child.id]: depthVariant(unit.depth + 1),
+      },
+    } satisfies LayoutResult;
+  });
+
+  const childrenRowWidth =
+    childLayouts.reduce((sum, layout) => sum + layout.width, 0) +
+    Math.max(childLayouts.length - 1, 0) * CHILD_GAP;
+  const childrenRowHeight = childLayouts.length
+    ? Math.max(...childLayouts.map((layout) => layout.height))
+    : 0;
+
+  const unitWidth = Math.max(coupleWidth, childrenRowWidth);
+  const unitHeight =
+    coupleHeight + (childLayouts.length > 0 ? CONNECTOR_GAP + childrenRowHeight : 0);
+
+  const coupleRowX = (unitWidth - coupleWidth) / 2;
+  const coupleRowY = 0;
+  const spouse1X = coupleRowX;
+  const spouse2X = coupleRowX + TREE_NODE_WIDTH + COUPLE_GAP;
+
+  const frames: Record<string, NodeFrame> = {
+    [unit.couple[0].id]: {
+      x: spouse1X,
+      y: coupleRowY,
+      width: TREE_NODE_WIDTH,
+      height: TREE_NODE_HEIGHT,
+    },
+    [unit.couple[1].id]: {
+      x: spouse2X,
+      y: coupleRowY,
+      width: TREE_NODE_WIDTH,
+      height: TREE_NODE_HEIGHT,
+    },
+  };
+  const variants: Record<string, Variant> = {
+    [unit.couple[0].id]: depthVariant(unit.depth),
+    [unit.couple[1].id]: depthVariant(unit.depth),
+  };
+
+  if (childLayouts.length > 0) {
+    let cursorX = (unitWidth - childrenRowWidth) / 2;
+    const childRowY = coupleHeight + CONNECTOR_GAP;
+    for (const layout of childLayouts) {
+      Object.entries(layout.frames).forEach(([memberId, frame]) => {
+        frames[memberId] = {
+          x: frame.x + cursorX,
+          y: frame.y + childRowY,
+          width: frame.width,
+          height: frame.height,
+        };
+      });
+      Object.assign(variants, layout.variants);
+      cursorX += layout.width + CHILD_GAP;
+    }
+  }
+
+  return { width: unitWidth, height: unitHeight, frames, variants };
+};
+
+const buildTreeLayout = (
+  centerUnit: FamilyUnit,
+  spouse1Parents: [FamilyMember, FamilyMember] | null,
+  spouse2Parents: [FamilyMember, FamilyMember] | null,
+): TreeLayout => {
+  const centerLayout = layoutUnit(centerUnit);
+  const coupleWidth = TREE_NODE_WIDTH * 2 + COUPLE_GAP;
+  const hasAncestors = Boolean(spouse1Parents || spouse2Parents);
+  const topRowWidth =
+    spouse1Parents && spouse2Parents
+      ? coupleWidth * 2 + SPOUSE_GAP
+      : spouse1Parents || spouse2Parents
+        ? coupleWidth
+        : 0;
+  const topRowHeight = hasAncestors ? TREE_NODE_HEIGHT : 0;
+
+  const baseWidth = Math.max(centerLayout.width, topRowWidth);
+  const baseHeight = hasAncestors
+    ? topRowHeight + CONNECTOR_GAP + centerLayout.height
+    : centerLayout.height;
+
+  const centerOffsetX = (baseWidth - centerLayout.width) / 2;
+  const centerOffsetY = hasAncestors ? topRowHeight + CONNECTOR_GAP : 0;
+
+  const frames: Record<string, NodeFrame> = {};
+  const variants: Record<string, Variant> = { ...centerLayout.variants };
+
+  Object.entries(centerLayout.frames).forEach(([memberId, frame]) => {
+    frames[memberId] = {
+      x: frame.x + centerOffsetX,
+      y: frame.y + centerOffsetY,
+      width: frame.width,
+      height: frame.height,
+    };
+  });
+
+  if (hasAncestors) {
+    const topRowX = (baseWidth - topRowWidth) / 2;
+    const leftX = topRowX;
+    const rightX = spouse1Parents && spouse2Parents
+      ? topRowX + coupleWidth + SPOUSE_GAP
+      : topRowX;
+
+    if (spouse1Parents) {
+      frames[spouse1Parents[0].id] = {
+        x: leftX,
+        y: 0,
+        width: TREE_NODE_WIDTH,
+        height: TREE_NODE_HEIGHT,
+      };
+      frames[spouse1Parents[1].id] = {
+        x: leftX + TREE_NODE_WIDTH + COUPLE_GAP,
+        y: 0,
+        width: TREE_NODE_WIDTH,
+        height: TREE_NODE_HEIGHT,
+      };
+      variants[spouse1Parents[0].id] = depthVariant(0);
+      variants[spouse1Parents[1].id] = depthVariant(0);
+    }
+
+    if (spouse2Parents) {
+      frames[spouse2Parents[0].id] = {
+        x: rightX,
+        y: 0,
+        width: TREE_NODE_WIDTH,
+        height: TREE_NODE_HEIGHT,
+      };
+      frames[spouse2Parents[1].id] = {
+        x: rightX + TREE_NODE_WIDTH + COUPLE_GAP,
+        y: 0,
+        width: TREE_NODE_WIDTH,
+        height: TREE_NODE_HEIGHT,
+      };
+      variants[spouse2Parents[0].id] = depthVariant(0);
+      variants[spouse2Parents[1].id] = depthVariant(0);
+    }
+  }
+
+  const squareSide = Math.max(baseWidth, baseHeight) + LAYOUT_PADDING * 2;
+  const squareOffsetX = (squareSide - baseWidth) / 2;
+  const squareOffsetY = (squareSide - baseHeight) / 2;
+
+  Object.entries(frames).forEach(([memberId, frame]) => {
+    frames[memberId] = {
+      x: frame.x + squareOffsetX,
+      y: frame.y + squareOffsetY,
+      width: frame.width,
+      height: frame.height,
+    };
+  });
+
+  return {
+    width: baseWidth,
+    height: baseHeight,
+    frames,
+    variants,
+    treeSize: { width: squareSide, height: squareSide },
+  };
+};
 
 export default function TreeScreen() {
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const isLoading = useFamilyStore((state) => state.isLoading);
   const buildFamilyTree = useFamilyStore((state) => state.buildFamilyTree);
+  const members = useFamilyStore((state) => state.members);
 
   // Gesture shared values
   const scale = useSharedValue(1);
@@ -36,23 +241,39 @@ export default function TreeScreen() {
 
   // Layout measurement for dynamic min-scale
   const [viewportSize, setViewportSize] = useState({ width: 1, height: 1 });
-  const [treeSize, setTreeSize] = useState({ width: 1, height: 1 });
 
   const handleViewportLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
     setViewportSize({ width, height });
   }, []);
 
-  const handleTreeLayout = useCallback((e: LayoutChangeEvent) => {
-    const { width, height } = e.nativeEvent.layout;
-    setTreeSize({ width, height });
-  }, []);
+  const tree = buildFamilyTree();
+  const spouse1Parents = tree?.spouse1Parents ?? null;
+  const spouse2Parents = tree?.spouse2Parents ?? null;
+  const centerUnit = tree?.centerUnit ?? null;
+  const spouse1 = centerUnit?.couple[0] ?? null;
+  const spouse2 = centerUnit?.couple[1] ?? null;
 
-  const minScale = Math.min(
-    viewportSize.width / treeSize.width,
-    viewportSize.height / treeSize.height,
-    1,
-  ) || 0.3;
+  const layout = useMemo(() => {
+    if (!centerUnit) return EMPTY_LAYOUT;
+    return buildTreeLayout(centerUnit, spouse1Parents, spouse2Parents);
+  }, [centerUnit, spouse1Parents, spouse2Parents]);
+
+  const minScale = useMemo(() => {
+    const fit = Math.min(
+      viewportSize.width / layout.treeSize.width,
+      viewportSize.height / layout.treeSize.height,
+      1,
+    );
+    return Number.isFinite(fit) ? fit : 0.3;
+  }, [layout.treeSize.height, layout.treeSize.width, viewportSize.height, viewportSize.width]);
+  const maxScale = Math.max(minScale * ZOOM_IN_MULTIPLIER, 1);
+
+  useEffect(() => {
+    const clamped = Math.min(Math.max(savedScale.value, minScale), maxScale);
+    scale.value = clamped;
+    savedScale.value = clamped;
+  }, [maxScale, minScale, savedScale, scale]);
 
   // Pan gesture
   const panGesture = Gesture.Pan()
@@ -69,7 +290,7 @@ export default function TreeScreen() {
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
       const newScale = savedScale.value * e.scale;
-      scale.value = Math.min(Math.max(newScale, minScale), 2);
+      scale.value = Math.min(Math.max(newScale, minScale), maxScale);
     })
     .onEnd(() => {
       savedScale.value = scale.value;
@@ -85,36 +306,99 @@ export default function TreeScreen() {
     ],
   }));
 
-  // Measurement state for connectors
-  const [ancestorRowWidth, setAncestorRowWidth] = useState(0);
-  const [childPositions, setChildPositions] = useState<number[]>([]);
-  const [childrenRowWidth, setChildrenRowWidth] = useState(0);
-
-  const handleAncestorRowLayout = useCallback((e: LayoutChangeEvent) => {
-    setAncestorRowWidth(e.nativeEvent.layout.width);
-  }, []);
-
-  const handleChildLayout = useCallback(
-    (index: number) => (e: LayoutChangeEvent) => {
-      const { x, width } = e.nativeEvent.layout;
-      setChildPositions((prev) => {
-        const next = [...prev];
-        next[index] = x + width / 2;
-        return next;
-      });
-    },
-    [],
-  );
-
-  const handleChildrenRowLayout = useCallback((e: LayoutChangeEvent) => {
-    setChildrenRowWidth(e.nativeEvent.layout.width);
-  }, []);
-
   const handleMemberPress = (member: FamilyMember) => {
     setSelectedMember(member);
   };
 
-  const tree = buildFamilyTree();
+  const connectors = useMemo(() => {
+    if (!centerUnit) {
+      return { spouseLines: [], stemLines: [], railLines: [], dropLines: [] };
+    }
+    const spouseLines: LineSeg[] = [];
+    const stemLines: LineSeg[] = [];
+    const railLines: LineSeg[] = [];
+    const dropLines: LineSeg[] = [];
+
+    const getFrame = (memberId: string) => layout.frames[memberId];
+
+    const getSpouseLine = (aId: string, bId: string) => {
+      const aFrame = getFrame(aId);
+      const bFrame = getFrame(bId);
+      if (!aFrame || !bFrame) return null;
+
+      const isALeft = aFrame.x <= bFrame.x;
+      const left = isALeft ? aFrame : bFrame;
+      const right = isALeft ? bFrame : aFrame;
+      const leftMidY = left.y + left.height / 2;
+      const rightMidY = right.y + right.height / 2;
+      const y = (leftMidY + rightMidY) / 2;
+      const x1 = left.x + left.width;
+      const x2 = right.x;
+      const midX = (x1 + x2) / 2;
+      const bottomY = Math.max(left.y + left.height, right.y + right.height);
+      const topY = Math.min(left.y, right.y);
+      return { x1, x2, y, midX, bottomY, topY, left, right };
+    };
+
+    const getChildAnchor = (child: FamilyUnit | FamilyMember) => {
+      if (isFamilyUnit(child)) {
+        const line = getSpouseLine(child.couple[0].id, child.couple[1].id);
+        if (!line) return null;
+        return { x: line.midX, y: line.y };
+      }
+      const frame = getFrame(child.id);
+      if (!frame) return null;
+      return { x: frame.x + frame.width / 2, y: frame.y };
+    };
+
+    const addUnit = (unit: FamilyUnit) => {
+      const line = getSpouseLine(unit.couple[0].id, unit.couple[1].id);
+      if (!line) return;
+
+      spouseLines.push({ x1: line.x1, y1: line.y, x2: line.x2, y2: line.y });
+
+      const anchors = unit.children
+        .map(getChildAnchor)
+        .filter((anchor): anchor is { x: number; y: number } => anchor !== null);
+
+      if (anchors.length === 0) return;
+
+      const anchorXs = anchors.map((a) => a.x);
+      const leftmostX = Math.min(line.midX, ...anchorXs);
+      const rightmostX = Math.max(line.midX, ...anchorXs);
+      const topY = Math.min(...anchors.map((a) => a.y));
+      const railCandidate = Math.max(line.y + spacing.sm, topY - spacing.sm);
+      const railY = Math.min(railCandidate, topY);
+
+      stemLines.push({ x1: line.midX, y1: line.y, x2: line.midX, y2: railY });
+      railLines.push({ x1: leftmostX, y1: railY, x2: rightmostX, y2: railY });
+      for (const anchor of anchors) {
+        dropLines.push({ x1: anchor.x, y1: railY, x2: anchor.x, y2: anchor.y });
+      }
+    };
+
+    const traverse = (unit: FamilyUnit) => {
+      addUnit(unit);
+      unit.children.filter(isFamilyUnit).forEach(traverse);
+    };
+
+    traverse(centerUnit);
+
+    if (spouse1Parents && spouse1) {
+      addUnit({ couple: spouse1Parents, children: [spouse1], depth: 0 });
+    }
+    if (spouse2Parents && spouse2) {
+      addUnit({ couple: spouse2Parents, children: [spouse2], depth: 0 });
+    }
+
+    return { spouseLines, stemLines, railLines, dropLines };
+  }, [centerUnit, layout.frames, spouse1Parents, spouse2Parents, spouse1, spouse2]);
+
+  const memberMap = useMemo(() => {
+    const map = new Map<string, FamilyMember>();
+    members.forEach((member) => map.set(member.id, member));
+    return map;
+  }, [members]);
 
   if (isLoading) {
     return (
@@ -134,24 +418,6 @@ export default function TreeScreen() {
     );
   }
 
-  const { spouse1Parents, spouse2Parents, centerUnit } = tree;
-  const [spouse1, spouse2] = centerUnit.couple;
-
-  const allChildMeasured =
-    centerUnit.children.length > 0 &&
-    childPositions.length === centerUnit.children.length &&
-    childPositions.every((p) => p !== undefined);
-
-  const connectorWidth = Math.max(ancestorRowWidth, childrenRowWidth);
-  const childrenOffset =
-    childrenRowWidth < connectorWidth ? (connectorWidth - childrenRowWidth) / 2 : 0;
-  const ancestorOffset =
-    ancestorRowWidth < connectorWidth ? (connectorWidth - ancestorRowWidth) / 2 : 0;
-  const adjustedChildPositions = allChildMeasured
-    ? childPositions.map((p) => p + childrenOffset)
-    : [];
-  const adjustedFocusCenter = ancestorRowWidth / 2 + ancestorOffset;
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -164,111 +430,93 @@ export default function TreeScreen() {
 
       <GestureDetector gesture={composed}>
         <View style={styles.panArea} onLayout={handleViewportLayout}>
-          <Animated.View
-            style={[styles.treeContainer, animatedStyle]}
-            onLayout={handleTreeLayout}
-          >
-          {/* Grandparents row: two branches side by side */}
-          <View style={styles.ancestorRow} onLayout={handleAncestorRowLayout}>
-            {/* Left branch: spouse1's parents → spouse1 */}
-            <View style={styles.ancestorBranch}>
-              {spouse1Parents && (
-                <>
-                  <View style={styles.coupleRow}>
-                    <TreeNode
-                      member={spouse1Parents[0]}
-                      onPress={handleMemberPress}
-                      isSelected={selectedMember?.id === spouse1Parents[0].id}
-                      variant="brown"
+          <Animated.View style={animatedStyle}>
+            <View
+              style={[
+                styles.treeContainer,
+                { width: layout.treeSize.width, height: layout.treeSize.height },
+              ]}
+            >
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.connectorLayer,
+                  { width: layout.treeSize.width, height: layout.treeSize.height },
+                ]}
+              >
+                <Svg width={layout.treeSize.width} height={layout.treeSize.height}>
+                  {connectors.spouseLines.map((line, index) => (
+                    <Line
+                      key={`spouse-${index}`}
+                      x1={line.x1}
+                      y1={line.y1}
+                      x2={line.x2}
+                      y2={line.y2}
+                      stroke={CONNECTOR_COLOR}
+                      strokeWidth={CONNECTOR_STROKE}
+                      strokeLinecap="round"
                     />
-                    <SpouseConnector width={COUPLE_GAP} />
-                    <TreeNode
-                      member={spouse1Parents[1]}
-                      onPress={handleMemberPress}
-                      isSelected={selectedMember?.id === spouse1Parents[1].id}
-                      variant="brown"
+                  ))}
+                  {connectors.stemLines.map((line, index) => (
+                    <Line
+                      key={`stem-${index}`}
+                      x1={line.x1}
+                      y1={line.y1}
+                      x2={line.x2}
+                      y2={line.y2}
+                      stroke={CONNECTOR_COLOR}
+                      strokeWidth={CONNECTOR_STROKE}
+                      strokeLinecap="round"
                     />
-                  </View>
-                  <VineVertical height={CONNECTOR_HEIGHT} />
-                </>
-              )}
-              <TreeNode
-                member={spouse1}
-                onPress={handleMemberPress}
-                isSelected={selectedMember?.id === spouse1.id}
-                variant="green"
-              />
+                  ))}
+                  {connectors.railLines.map((line, index) => (
+                    <Line
+                      key={`rail-${index}`}
+                      x1={line.x1}
+                      y1={line.y1}
+                      x2={line.x2}
+                      y2={line.y2}
+                      stroke={CONNECTOR_COLOR}
+                      strokeWidth={CONNECTOR_STROKE}
+                      strokeLinecap="round"
+                    />
+                  ))}
+                  {connectors.dropLines.map((line, index) => (
+                    <Line
+                      key={`drop-${index}`}
+                      x1={line.x1}
+                      y1={line.y1}
+                      x2={line.x2}
+                      y2={line.y2}
+                      stroke={CONNECTOR_COLOR}
+                      strokeWidth={CONNECTOR_STROKE}
+                      strokeLinecap="round"
+                    />
+                  ))}
+                </Svg>
+              </View>
+
+              {Array.from(memberMap.entries()).map(([memberId, member]) => {
+                const frame = layout.frames[memberId];
+                if (!frame) return null;
+                return (
+                  <TreeNode
+                    key={memberId}
+                    member={member}
+                    onPress={handleMemberPress}
+                    isSelected={selectedMember?.id === memberId}
+                    variant={layout.variants[memberId] ?? 'green'}
+                    style={{
+                      position: 'absolute',
+                      left: frame.x,
+                      top: frame.y,
+                      width: frame.width,
+                      height: frame.height,
+                    }}
+                  />
+                );
+              })}
             </View>
-
-            <SpouseConnector width={SPOUSE_GAP} height={100} />
-
-            {/* Right branch: spouse2's parents → spouse2 */}
-            <View style={styles.ancestorBranch}>
-              {spouse2Parents && (
-                <>
-                  <View style={styles.coupleRow}>
-                    <TreeNode
-                      member={spouse2Parents[0]}
-                      onPress={handleMemberPress}
-                      isSelected={selectedMember?.id === spouse2Parents[0].id}
-                      variant="brown"
-                    />
-                    <SpouseConnector width={COUPLE_GAP} />
-                    <TreeNode
-                      member={spouse2Parents[1]}
-                      onPress={handleMemberPress}
-                      isSelected={selectedMember?.id === spouse2Parents[1].id}
-                      variant="brown"
-                    />
-                  </View>
-                  <VineVertical height={CONNECTOR_HEIGHT} />
-                </>
-              )}
-              <TreeNode
-                member={spouse2}
-                onPress={handleMemberPress}
-                isSelected={selectedMember?.id === spouse2.id}
-                variant="green"
-              />
-            </View>
-          </View>
-
-          {/* Connector from focus couple to children */}
-          {centerUnit.children.length > 0 && (
-            <FamilyConnector
-              childPositions={adjustedChildPositions}
-              width={connectorWidth}
-              coupleCenter={adjustedFocusCenter}
-              height={CONNECTOR_HEIGHT}
-            />
-          )}
-
-          {/* Children row */}
-          {centerUnit.children.length > 0 && (
-            <View style={styles.childrenRow} onLayout={handleChildrenRowLayout}>
-              {centerUnit.children.map((child, i) => (
-                <View
-                  key={isFamilyUnit(child) ? child.couple[0].id : child.id}
-                  onLayout={handleChildLayout(i)}
-                >
-                  {isFamilyUnit(child) ? (
-                    <FamilyUnitNode
-                      unit={child}
-                      selectedMemberId={selectedMember?.id ?? null}
-                      onMemberPress={handleMemberPress}
-                    />
-                  ) : (
-                    <TreeNode
-                      member={child}
-                      onPress={handleMemberPress}
-                      isSelected={selectedMember?.id === child.id}
-                      variant="branch"
-                    />
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
           </Animated.View>
         </View>
       </GestureDetector>
@@ -304,27 +552,18 @@ const styles = StyleSheet.create({
   panArea: {
     flex: 1,
     overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   treeContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  ancestorRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  ancestorBranch: {
-    alignItems: 'center',
-  },
-  coupleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  childrenRow: {
-    flexDirection: 'row',
+    position: 'relative',
     alignItems: 'flex-start',
-    gap: GAP,
+    justifyContent: 'flex-start',
+  },
+  connectorLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   loader: {
     flex: 1,
