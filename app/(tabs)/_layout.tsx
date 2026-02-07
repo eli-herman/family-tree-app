@@ -1,5 +1,4 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../src/constants';

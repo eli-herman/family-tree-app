@@ -1,4 +1,5 @@
 import { FamilyMember, RelationshipType } from '../types/user';
+import type { ParentRelationshipType } from '../types/user';
 
 /**
  * Calculate the relationship label from the current user's perspective.
@@ -19,7 +20,7 @@ import { FamilyMember, RelationshipType } from '../types/user';
 export function calculateRelationship(
   currentUserId: string,
   targetId: string,
-  members: FamilyMember[]
+  members: FamilyMember[],
 ): string {
   // Same person
   if (currentUserId === targetId) {
@@ -36,7 +37,7 @@ export function calculateRelationship(
   // Check direct relationships from current user to target
   const directRel = currentUser.relationships.find((r) => r.memberId === targetId);
   if (directRel) {
-    return formatDirectRelationship(directRel.type, target);
+    return formatDirectRelationship(directRel.type, target, directRel.kind);
   }
 
   // Check if target is a sibling (share at least one parent)
@@ -65,7 +66,7 @@ export function calculateRelationship(
   for (const sibling of siblings) {
     // Check if target is sibling's spouse
     const siblingSpouseRel = sibling.relationships.find(
-      (r) => r.type === 'spouse' && r.memberId === targetId
+      (r) => r.type === 'spouse' && r.memberId === targetId,
     );
     if (siblingSpouseRel) {
       return target.gender === 'male' ? 'Your Brother-in-law' : 'Your Sister-in-law';
@@ -77,7 +78,7 @@ export function calculateRelationship(
     const parent = members.find((m) => m.id === parentId);
     if (parent) {
       const isGrandparent = parent.relationships.find(
-        (r) => r.type === 'parent' && r.memberId === targetId
+        (r) => r.type === 'parent' && r.memberId === targetId,
       );
       if (isGrandparent) {
         return target.gender === 'male' ? 'Your Grandpa' : 'Your Grandma';
@@ -94,7 +95,7 @@ export function calculateRelationship(
     const child = members.find((m) => m.id === childId);
     if (child) {
       const isGrandchild = child.relationships.find(
-        (r) => r.type === 'child' && r.memberId === targetId
+        (r) => r.type === 'child' && r.memberId === targetId,
       );
       if (isGrandchild) {
         return target.gender === 'male' ? 'Your Grandson' : 'Your Granddaughter';
@@ -108,7 +109,7 @@ export function calculateRelationship(
     const spouse = members.find((m) => m.id === spouseRel.memberId);
     if (spouse) {
       const isParentInLaw = spouse.relationships.find(
-        (r) => r.type === 'parent' && r.memberId === targetId
+        (r) => r.type === 'parent' && r.memberId === targetId,
       );
       if (isParentInLaw) {
         return target.gender === 'male' ? 'Your Father-in-law' : 'Your Mother-in-law';
@@ -127,12 +128,32 @@ export function calculateRelationship(
  * @param target - The target family member (used for gender)
  * @returns A formatted string like "Your Mom", "Your Son", etc.
  */
-function formatDirectRelationship(type: RelationshipType, target: FamilyMember): string {
+function formatDirectRelationship(
+  type: RelationshipType,
+  target: FamilyMember,
+  kind?: ParentRelationshipType,
+): string {
+  const parentLabel = (fallback: string) => {
+    if (kind === 'step') return target.gender === 'male' ? 'Your Stepdad' : 'Your Stepmom';
+    if (kind === 'adopted')
+      return target.gender === 'male' ? 'Your Adoptive Dad' : 'Your Adoptive Mom';
+    if (kind === 'guardian') return 'Your Guardian';
+    return fallback;
+  };
+
+  const childLabel = (fallback: string) => {
+    if (kind === 'step') return target.gender === 'male' ? 'Your Stepson' : 'Your Stepdaughter';
+    if (kind === 'adopted')
+      return target.gender === 'male' ? 'Your Adopted Son' : 'Your Adopted Daughter';
+    if (kind === 'guardian') return target.gender === 'male' ? 'Your Ward' : 'Your Ward';
+    return fallback;
+  };
+
   switch (type) {
     case 'parent':
-      return target.gender === 'male' ? 'Your Dad' : 'Your Mom';
+      return parentLabel(target.gender === 'male' ? 'Your Dad' : 'Your Mom');
     case 'child':
-      return target.gender === 'male' ? 'Your Son' : 'Your Daughter';
+      return childLabel(target.gender === 'male' ? 'Your Son' : 'Your Daughter');
     case 'spouse':
       return 'Your Spouse';
     case 'sibling':

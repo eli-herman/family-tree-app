@@ -1,74 +1,105 @@
 ---
 device: Mac.lan
 branch: main
-commit: 31624c0
-timestamp: "2026-02-07T05:24:50Z"
+commit: 5039aca
+timestamp: '2026-02-07T08:27:10Z'
 ---
 
 # Session Handoff
 
 ## Summary
-Last commit: `31624c0` on `main`
-> docs: update STATE, changelog, HANDOFF with auth + Codex work tracking
 
-- STATE.md: added auth decisions, Codex quick tasks 002-005, blockers
-- changelog.md: Firebase auth entry + Codex tree refactor entry
-- updates-log.md: auth implementation notes for other agents
-- HANDOFF.md: comprehensive handoff with architecture diagrams, open issues, next steps
-- Added .codex/quick/ task plans and summaries (002-005)
+Last commit: `5039aca` on `main`
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+> chore: update HANDOFF.md [31624c0]
 
-## Files Changed
+- Implemented Firestore-backed **family units** with single-parent support and typed child links.
+- Added `addSpouse`, `addChild`, `addSibling`, and `addParent` actions with relationship normalization.
+- Member profile now supports **Add Spouse/Add Parent/Add Child/Add Sibling** + relation type chips.
+- Tree layout + connectors now support single-parent units (no spouse line).
+- Enforced **one partner at a time** (blocks adding spouse if already partnered).
+- Tree nodes now navigate to member modal on tap.
+- Dev-only seed: if Firestore is empty, mock data is written to `families/demo-family/*`.
+- Added repo professionalism baseline: README, CONTRIBUTING, LICENSE.
+- Added ESLint + Prettier configs and lint/format scripts.
+- Added Jest config + initial relationship utility tests.
+- Added GitHub Actions CI plus issue/PR templates.
+- Added Husky + lint-staged pre-commit hooks.
+- Added a terminal-style README banner ("The Vine" + John 15:5).
+- Added `react-dom@19.1.0` to align with React and fix npm ERESOLVE on install.
+- Updated `eslint-config-expo` to `55.0.0`; `npm install`, lint, test, and typecheck now succeed.
+- Removed deprecated `@testing-library/jest-native` and updated Jest setup.
+- Ran `npm audit fix` and cleared the high-severity vulnerability.
+- Reset Watchman watch to remove recrawl warnings.
+- Updated README with CI + secret scanning badges; removed ASCII banner.
+- Added Dependabot config for npm + GitHub Actions updates.
+- Added README note for enabling GitHub secret scanning.
 
+## Files Changed (this session)
+
+- app/(tabs)/tree.tsx
+- app/(tabs)/\_layout.tsx
+- app/(tabs)/profile.tsx
+- app/member/[id].tsx
+- app/paywall.tsx
+- src/stores/familyStore.ts
+- src/stores/subscriptionStore.ts
+- src/types/tree.ts
+- src/types/user.ts
+- src/utils/relationships.ts
+- src/utils/**tests**/relationships.test.ts
+- src/components/common/Avatar.tsx
+- src/components/feed/FeedItem.tsx
+- src/components/feed/PromptCard.tsx
+- src/components/profile/ProfileHeader.tsx
+- HANDOFF.md
 - .claude/agents/status-board.md
 - .claude/agents/updates-log.md
 - .claude/changelog.md
-- .codex/STATE.md
-- .codex/quick/002-add-ella-preston-child/002-PLAN.md
-- .codex/quick/002-add-ella-preston-child/002-SUMMARY.md
-- .codex/quick/003-fix-nested-connector-loop/003-PLAN.md
-- .codex/quick/003-fix-nested-connector-loop/003-SUMMARY.md
-- .codex/quick/004-branch-style-connectors/004-PLAN.md
-- .codex/quick/004-branch-style-connectors/004-SUMMARY.md
-- .codex/quick/005-fix-connector-anchors-zoom-limits/005-PLAN.md
-- .planning/STATE.md
-- HANDOFF.md
+- .codex/quick/006-add-member-plan/006-SUMMARY.md
+- README.md
+- CONTRIBUTING.md
+- LICENSE
+- package.json
+- package-lock.json
+- .eslintrc.js
+- .eslintignore
+- .prettierrc
+- .prettierignore
+- jest.config.js
+- jest.setup.ts
+- .github/workflows/ci.yml
+- .github/pull_request_template.md
+- .github/ISSUE_TEMPLATE/bug_report.md
+- .github/ISSUE_TEMPLATE/feature_request.md
+- .github/dependabot.yml
+- .husky/pre-commit
 
-## Diff Stats
-```
- .claude/agents/status-board.md                     |   9 +-
- .claude/agents/updates-log.md                      |  56 +++++++
- .claude/changelog.md                               |  65 ++++++++
- .codex/STATE.md                                    |  16 ++
- .../quick/002-add-ella-preston-child/002-PLAN.md   |  71 +++++++++
- .../002-add-ella-preston-child/002-SUMMARY.md      |  78 +++++++++
- .../003-fix-nested-connector-loop/003-PLAN.md      |  76 +++++++++
- .../003-fix-nested-connector-loop/003-SUMMARY.md   |  79 ++++++++++
- .../quick/004-branch-style-connectors/004-PLAN.md  |  81 ++++++++++
- .../004-branch-style-connectors/004-SUMMARY.md     |  86 ++++++++++
- .../005-PLAN.md                                    | 134 ++++++++++++++++
- .planning/STATE.md                                 |  44 ++++--
- HANDOFF.md                                         | 175 +++++++++++++--------
- 13 files changed, 891 insertions(+), 79 deletions(-)
-```
+## Unrelated Local Changes
+
+- Existing unstaged tooling changes under `.claude/mcp-local-model/` (left untouched).
 
 ## Active Tasks
-_Update manually or via MCP tool._
+
+- Verify add-member flow on device (spouse + parent + child + sibling) and confirm connectors remain stable.
+- If tree shows only a small subset, clear `families/demo-family/*` so dev seed re-runs.
 
 ## Blockers
-_None detected._
+
+- None known (Firebase project exists; Storage still on Spark).
+
+## Notes
+
+- Canonical units live in Firestore: `families/{familyId}/units` with `partnerIds` + `childLinks`.
+- Child links support per-parent relation types: `biological`, `adopted`, `step`, `guardian`.
+- Relationships are derived on load and after writes; member docs do not store relationships.
+- Single-parent supported; only one partner at a time enforced.
+- `npm audit` is clean; watchman recrawl warnings resolved.
+- `npm install` reported deprecated packages; consider dependency refresh later.
+- Secret scanning must be enabled in GitHub settings (Repository Settings → Security & analysis).
 
 ## Next Steps
-_See AI Summary below for suggestions._
 
-## AI Summary
-This commit updates several files related to authentication and project tracking for a developer switching devices:
-
-1. **STATE.md**: Added authentication decisions, Codex quick tasks 002-005, and blockers.
-2. **changelog.md**: Included Firebase auth entry and Codex tree refactor entry.
-3. **updates-log.md**: Added notes on the auth implementation for other agents.
-4. **HANDOFF.md**: Updated with comprehensive handoff information, including architecture diagrams, open issues, and next steps.
-5. **.codex/quick/**: Added task plans and summaries for tasks 002-005.
-
-These changes aim to streamline authentication processes, document project progress, and ensure a smooth transition between devices. Review the updated files for detailed information on specific changes and next steps.
+1. Add spouse + parent + child + sibling on device; confirm layout/connector stability.
+2. If desired, add an explicit “Add Member” entry point on the tree header.
+3. Decide if/when to allow sequential partners (divorced/widowed history).

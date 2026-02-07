@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
 import { format } from 'date-fns';
 import { Avatar, Card } from '../common';
 import { colors, typography, spacing, borderRadius } from '../../constants';
@@ -17,7 +16,8 @@ export function FeedItem({ item, onHeart, currentUserId }: FeedItemProps) {
   const heartCount = item.hearts.length;
 
   // Alternate avatar colors
-  const avatarVariant = item.authorId.includes('1') || item.authorId.includes('3') ? 'green' : 'brown';
+  const avatarVariant =
+    item.authorId.includes('1') || item.authorId.includes('3') ? 'green' : 'brown';
 
   return (
     <Card style={styles.container} variant="filled">
@@ -26,14 +26,16 @@ export function FeedItem({ item, onHeart, currentUserId }: FeedItemProps) {
         <View style={styles.headerText}>
           <Text style={styles.authorName}>{item.authorName}</Text>
           <Text style={styles.action}>
-            {item.type === 'photo' ? 'added a photo' :
-             item.type === 'memory' ? 'shared a memory' :
-             item.type === 'milestone' ? 'shared a milestone' : 'responded to a prompt'}
+            {item.type === 'photo'
+              ? 'added a photo'
+              : item.type === 'memory'
+                ? 'shared a memory'
+                : item.type === 'milestone'
+                  ? 'shared a milestone'
+                  : 'responded to a prompt'}
           </Text>
         </View>
-        <Text style={styles.timestamp}>
-          {format(item.createdAt, 'h')}h
-        </Text>
+        <Text style={styles.timestamp}>{format(item.createdAt, 'h')}h</Text>
       </View>
 
       {item.content.mediaURLs && item.content.mediaURLs.length > 0 && (
@@ -54,10 +56,7 @@ export function FeedItem({ item, onHeart, currentUserId }: FeedItemProps) {
       )}
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.heartButton}
-          onPress={() => onHeart(item.id)}
-        >
+        <TouchableOpacity style={styles.heartButton} onPress={() => onHeart(item.id)}>
           <Text style={[styles.heartIcon, isHearted && styles.heartIconActive]}>
             {isHearted ? '♥' : '♡'}
           </Text>

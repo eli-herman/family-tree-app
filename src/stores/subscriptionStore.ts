@@ -1,9 +1,5 @@
 import { create } from 'zustand';
-import {
-  SubscriptionTier,
-  SubscriptionInfo,
-  TIER_LIMITS,
-} from '../types/subscription';
+import { SubscriptionInfo, TIER_LIMITS } from '../types/subscription';
 
 interface SubscriptionState extends SubscriptionInfo {
   // Actions

@@ -24,10 +24,25 @@ export interface FamilyMember {
   updatedAt: Date;
 }
 
+export interface NewMemberInput {
+  firstName: string;
+  lastName: string;
+  nickname?: string;
+  photoURL?: string;
+  birthDate?: Date;
+  deathDate?: Date;
+  bio?: string;
+  gender?: 'male' | 'female';
+  relationshipType?: ParentRelationshipType;
+}
+
 export interface Relationship {
   memberId: string;
   type: RelationshipType;
+  kind?: ParentRelationshipType;
 }
+
+export type ParentRelationshipType = 'biological' | 'adopted' | 'step' | 'guardian';
 
 export type RelationshipType =
   | 'parent'

@@ -1,23 +1,17 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import {
-  View,
-  StyleSheet,
-  Text,
-  Image,
-  ActivityIndicator,
-  LayoutChangeEvent,
-} from 'react-native';
+import { View, StyleSheet, Text, Image, ActivityIndicator, LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
+import { useRouter } from 'expo-router';
 import { TreeNode, TREE_NODE_HEIGHT, TREE_NODE_WIDTH } from '../../src/components/tree';
 import { colors, spacing } from '../../src/constants';
 import { FamilyMember, FamilyUnit, isFamilyUnit } from '../../src/types';
 import { useFamilyStore } from '../../src/stores';
 
 const SPOUSE_GAP = spacing['2xl']; // 48px between ancestor branches
-const COUPLE_GAP = spacing.md;     // 16px between spouses within a couple
+const COUPLE_GAP = spacing.md; // 16px between spouses within a couple
 const CHILD_GAP = spacing.md;
 const CONNECTOR_GAP = 48;
 const LAYOUT_PADDING = 48;
@@ -28,6 +22,15 @@ const CONNECTOR_COLOR = colors.brown.branch;
 type LineSeg = { x1: number; y1: number; x2: number; y2: number };
 type NodeFrame = { x: number; y: number; width: number; height: number };
 type Variant = 'brown' | 'green' | 'branch';
+type PartnerLine = {
+  x1: number;
+  x2: number;
+  y: number;
+  midX: number;
+  bottomY: number;
+  topY: number;
+  partnerCount: 1 | 2;
+};
 type LayoutResult = {
   width: number;
   height: number;
@@ -51,8 +54,9 @@ const depthVariant = (depth: number): Variant => {
 };
 
 const layoutUnit = (unit: FamilyUnit): LayoutResult => {
-  const coupleWidth = TREE_NODE_WIDTH * 2 + COUPLE_GAP;
-  const coupleHeight = TREE_NODE_HEIGHT;
+  const partnerCount = unit.partners.length;
+  const partnerWidth = partnerCount === 2 ? TREE_NODE_WIDTH * 2 + COUPLE_GAP : TREE_NODE_WIDTH;
+  const partnerHeight = TREE_NODE_HEIGHT;
 
   const childLayouts = unit.children.map((child) => {
     if (isFamilyUnit(child)) {
@@ -77,37 +81,43 @@ const layoutUnit = (unit: FamilyUnit): LayoutResult => {
     ? Math.max(...childLayouts.map((layout) => layout.height))
     : 0;
 
-  const unitWidth = Math.max(coupleWidth, childrenRowWidth);
+  const unitWidth = Math.max(partnerWidth, childrenRowWidth);
   const unitHeight =
-    coupleHeight + (childLayouts.length > 0 ? CONNECTOR_GAP + childrenRowHeight : 0);
+    partnerHeight + (childLayouts.length > 0 ? CONNECTOR_GAP + childrenRowHeight : 0);
 
-  const coupleRowX = (unitWidth - coupleWidth) / 2;
-  const coupleRowY = 0;
-  const spouse1X = coupleRowX;
-  const spouse2X = coupleRowX + TREE_NODE_WIDTH + COUPLE_GAP;
+  const partnerRowX = (unitWidth - partnerWidth) / 2;
+  const partnerRowY = 0;
 
   const frames: Record<string, NodeFrame> = {
-    [unit.couple[0].id]: {
-      x: spouse1X,
-      y: coupleRowY,
-      width: TREE_NODE_WIDTH,
-      height: TREE_NODE_HEIGHT,
-    },
-    [unit.couple[1].id]: {
-      x: spouse2X,
-      y: coupleRowY,
-      width: TREE_NODE_WIDTH,
-      height: TREE_NODE_HEIGHT,
-    },
+    ...(partnerCount >= 1
+      ? {
+          [unit.partners[0].id]: {
+            x: partnerRowX,
+            y: partnerRowY,
+            width: TREE_NODE_WIDTH,
+            height: TREE_NODE_HEIGHT,
+          },
+        }
+      : {}),
+    ...(partnerCount === 2
+      ? {
+          [unit.partners[1].id]: {
+            x: partnerRowX + TREE_NODE_WIDTH + COUPLE_GAP,
+            y: partnerRowY,
+            width: TREE_NODE_WIDTH,
+            height: TREE_NODE_HEIGHT,
+          },
+        }
+      : {}),
   };
   const variants: Record<string, Variant> = {
-    [unit.couple[0].id]: depthVariant(unit.depth),
-    [unit.couple[1].id]: depthVariant(unit.depth),
+    ...(partnerCount >= 1 ? { [unit.partners[0].id]: depthVariant(unit.depth) } : {}),
+    ...(partnerCount === 2 ? { [unit.partners[1].id]: depthVariant(unit.depth) } : {}),
   };
 
   if (childLayouts.length > 0) {
     let cursorX = (unitWidth - childrenRowWidth) / 2;
-    const childRowY = coupleHeight + CONNECTOR_GAP;
+    const childRowY = partnerHeight + CONNECTOR_GAP;
     for (const layout of childLayouts) {
       Object.entries(layout.frames).forEach(([memberId, frame]) => {
         frames[memberId] = {
@@ -127,18 +137,20 @@ const layoutUnit = (unit: FamilyUnit): LayoutResult => {
 
 const buildTreeLayout = (
   centerUnit: FamilyUnit,
-  spouse1Parents: [FamilyMember, FamilyMember] | null,
-  spouse2Parents: [FamilyMember, FamilyMember] | null,
+  spouse1Parents: FamilyMember[] | null,
+  spouse2Parents: FamilyMember[] | null,
 ): TreeLayout => {
   const centerLayout = layoutUnit(centerUnit);
   const coupleWidth = TREE_NODE_WIDTH * 2 + COUPLE_GAP;
-  const hasAncestors = Boolean(spouse1Parents || spouse2Parents);
+  const getParentWidth = (parents: FamilyMember[] | null) => {
+    if (!parents || parents.length === 0) return 0;
+    return parents.length === 2 ? coupleWidth : TREE_NODE_WIDTH;
+  };
+  const leftWidth = getParentWidth(spouse1Parents);
+  const rightWidth = getParentWidth(spouse2Parents);
+  const hasAncestors = leftWidth > 0 || rightWidth > 0;
   const topRowWidth =
-    spouse1Parents && spouse2Parents
-      ? coupleWidth * 2 + SPOUSE_GAP
-      : spouse1Parents || spouse2Parents
-        ? coupleWidth
-        : 0;
+    leftWidth > 0 && rightWidth > 0 ? leftWidth + rightWidth + SPOUSE_GAP : leftWidth + rightWidth;
   const topRowHeight = hasAncestors ? TREE_NODE_HEIGHT : 0;
 
   const baseWidth = Math.max(centerLayout.width, topRowWidth);
@@ -164,42 +176,45 @@ const buildTreeLayout = (
   if (hasAncestors) {
     const topRowX = (baseWidth - topRowWidth) / 2;
     const leftX = topRowX;
-    const rightX = spouse1Parents && spouse2Parents
-      ? topRowX + coupleWidth + SPOUSE_GAP
-      : topRowX;
+    const rightX =
+      leftWidth > 0 ? topRowX + leftWidth + (rightWidth > 0 ? SPOUSE_GAP : 0) : topRowX;
 
-    if (spouse1Parents) {
+    if (spouse1Parents && spouse1Parents.length > 0) {
       frames[spouse1Parents[0].id] = {
         x: leftX,
         y: 0,
         width: TREE_NODE_WIDTH,
         height: TREE_NODE_HEIGHT,
       };
-      frames[spouse1Parents[1].id] = {
-        x: leftX + TREE_NODE_WIDTH + COUPLE_GAP,
-        y: 0,
-        width: TREE_NODE_WIDTH,
-        height: TREE_NODE_HEIGHT,
-      };
       variants[spouse1Parents[0].id] = depthVariant(0);
-      variants[spouse1Parents[1].id] = depthVariant(0);
+      if (spouse1Parents.length === 2) {
+        frames[spouse1Parents[1].id] = {
+          x: leftX + TREE_NODE_WIDTH + COUPLE_GAP,
+          y: 0,
+          width: TREE_NODE_WIDTH,
+          height: TREE_NODE_HEIGHT,
+        };
+        variants[spouse1Parents[1].id] = depthVariant(0);
+      }
     }
 
-    if (spouse2Parents) {
+    if (spouse2Parents && spouse2Parents.length > 0) {
       frames[spouse2Parents[0].id] = {
         x: rightX,
         y: 0,
         width: TREE_NODE_WIDTH,
         height: TREE_NODE_HEIGHT,
       };
-      frames[spouse2Parents[1].id] = {
-        x: rightX + TREE_NODE_WIDTH + COUPLE_GAP,
-        y: 0,
-        width: TREE_NODE_WIDTH,
-        height: TREE_NODE_HEIGHT,
-      };
       variants[spouse2Parents[0].id] = depthVariant(0);
-      variants[spouse2Parents[1].id] = depthVariant(0);
+      if (spouse2Parents.length === 2) {
+        frames[spouse2Parents[1].id] = {
+          x: rightX + TREE_NODE_WIDTH + COUPLE_GAP,
+          y: 0,
+          width: TREE_NODE_WIDTH,
+          height: TREE_NODE_HEIGHT,
+        };
+        variants[spouse2Parents[1].id] = depthVariant(0);
+      }
     }
   }
 
@@ -227,6 +242,7 @@ const buildTreeLayout = (
 
 export default function TreeScreen() {
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
+  const router = useRouter();
   const isLoading = useFamilyStore((state) => state.isLoading);
   const buildFamilyTree = useFamilyStore((state) => state.buildFamilyTree);
   const members = useFamilyStore((state) => state.members);
@@ -251,8 +267,8 @@ export default function TreeScreen() {
   const spouse1Parents = tree?.spouse1Parents ?? null;
   const spouse2Parents = tree?.spouse2Parents ?? null;
   const centerUnit = tree?.centerUnit ?? null;
-  const spouse1 = centerUnit?.couple[0] ?? null;
-  const spouse2 = centerUnit?.couple[1] ?? null;
+  const spouse1 = centerUnit?.partners[0] ?? null;
+  const spouse2 = centerUnit?.partners[1] ?? null;
 
   const layout = useMemo(() => {
     if (!centerUnit) return EMPTY_LAYOUT;
@@ -308,6 +324,7 @@ export default function TreeScreen() {
 
   const handleMemberPress = (member: FamilyMember) => {
     setSelectedMember(member);
+    router.push(`/member/${member.id}`);
   };
 
   const connectors = useMemo(() => {
@@ -321,9 +338,26 @@ export default function TreeScreen() {
 
     const getFrame = (memberId: string) => layout.frames[memberId];
 
-    const getSpouseLine = (aId: string, bId: string) => {
-      const aFrame = getFrame(aId);
-      const bFrame = getFrame(bId);
+    const getPartnerLine = (partnerIds: string[]): PartnerLine | null => {
+      if (partnerIds.length === 0) return null;
+      if (partnerIds.length === 1) {
+        const frame = getFrame(partnerIds[0]);
+        if (!frame) return null;
+        const midX = frame.x + frame.width / 2;
+        const y = frame.y + frame.height / 2;
+        return {
+          x1: midX,
+          x2: midX,
+          y,
+          midX,
+          bottomY: frame.y + frame.height,
+          topY: frame.y,
+          partnerCount: 1 as const,
+        };
+      }
+
+      const aFrame = getFrame(partnerIds[0]);
+      const bFrame = getFrame(partnerIds[1]);
       if (!aFrame || !bFrame) return null;
 
       const isALeft = aFrame.x <= bFrame.x;
@@ -337,12 +371,12 @@ export default function TreeScreen() {
       const midX = (x1 + x2) / 2;
       const bottomY = Math.max(left.y + left.height, right.y + right.height);
       const topY = Math.min(left.y, right.y);
-      return { x1, x2, y, midX, bottomY, topY, left, right };
+      return { x1, x2, y, midX, bottomY, topY, partnerCount: 2 as const };
     };
 
     const getChildAnchor = (child: FamilyUnit | FamilyMember) => {
       if (isFamilyUnit(child)) {
-        const line = getSpouseLine(child.couple[0].id, child.couple[1].id);
+        const line = getPartnerLine(child.partners.map((partner) => partner.id));
         if (!line) return null;
         return { x: line.midX, y: line.y };
       }
@@ -352,10 +386,12 @@ export default function TreeScreen() {
     };
 
     const addUnit = (unit: FamilyUnit) => {
-      const line = getSpouseLine(unit.couple[0].id, unit.couple[1].id);
+      const line = getPartnerLine(unit.partners.map((partner) => partner.id));
       if (!line) return;
 
-      spouseLines.push({ x1: line.x1, y1: line.y, x2: line.x2, y2: line.y });
+      if (line.partnerCount === 2) {
+        spouseLines.push({ x1: line.x1, y1: line.y, x2: line.x2, y2: line.y });
+      }
 
       const anchors = unit.children
         .map(getChildAnchor)
@@ -385,10 +421,10 @@ export default function TreeScreen() {
     traverse(centerUnit);
 
     if (spouse1Parents && spouse1) {
-      addUnit({ couple: spouse1Parents, children: [spouse1], depth: 0 });
+      addUnit({ partners: spouse1Parents, children: [spouse1], depth: 0 });
     }
     if (spouse2Parents && spouse2) {
-      addUnit({ couple: spouse2Parents, children: [spouse2], depth: 0 });
+      addUnit({ partners: spouse2Parents, children: [spouse2], depth: 0 });
     }
 
     return { spouseLines, stemLines, railLines, dropLines };
@@ -421,10 +457,7 @@ export default function TreeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Image
-          source={require('../../assets/app_logo_icon.png')}
-          style={styles.logo}
-        />
+        <Image source={require('../../assets/app_logo_icon.png')} style={styles.logo} />
         <Text style={styles.title}>Family Tree</Text>
       </View>
 

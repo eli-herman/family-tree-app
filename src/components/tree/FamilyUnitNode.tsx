@@ -15,7 +15,7 @@ interface FamilyUnitNodeProps {
 }
 
 const getChildKey = (child: FamilyUnit | FamilyMember) =>
-  (isFamilyUnit(child) ? child.couple[0].id : child.id);
+  isFamilyUnit(child) ? child.partners[0].id : child.id;
 
 const depthVariant = (depth: number): 'brown' | 'green' | 'branch' => {
   if (depth === 0) return 'brown';
@@ -23,14 +23,10 @@ const depthVariant = (depth: number): 'brown' | 'green' | 'branch' => {
   return 'branch';
 };
 
-export function FamilyUnitNode({
-  unit,
-  selectedMemberId,
-  onMemberPress,
-}: FamilyUnitNodeProps) {
+export function FamilyUnitNode({ unit, selectedMemberId, onMemberPress }: FamilyUnitNodeProps) {
   const variant = depthVariant(unit.depth);
 
-  const [a, b] = unit.couple;
+  const [a, b] = unit.partners;
 
   return (
     <View style={styles.container}>
@@ -41,18 +37,20 @@ export function FamilyUnitNode({
           isSelected={selectedMemberId === a.id}
           variant={variant}
         />
-        <View style={{ width: SPOUSE_GAP }} />
-        <TreeNode
-          member={b}
-          onPress={onMemberPress}
-          isSelected={selectedMemberId === b.id}
-          variant={variant}
-        />
+        {b && (
+          <>
+            <View style={{ width: SPOUSE_GAP }} />
+            <TreeNode
+              member={b}
+              onPress={onMemberPress}
+              isSelected={selectedMemberId === b.id}
+              variant={variant}
+            />
+          </>
+        )}
       </View>
 
-      {unit.children.length > 0 && (
-        <View style={{ height: CONNECTOR_GAP }} />
-      )}
+      {unit.children.length > 0 && <View style={{ height: CONNECTOR_GAP }} />}
 
       {unit.children.length > 0 && (
         <View style={styles.childrenRow}>

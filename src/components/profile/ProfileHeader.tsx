@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Avatar, Button } from '../common';
-import { colors, typography, spacing } from '../../constants';
+import { colors, spacing } from '../../constants';
 import { FamilyMember } from '../../types';
 
 interface ProfileHeaderProps {
@@ -18,12 +18,8 @@ export function ProfileHeader({ member, onEdit, isCurrentUser }: ProfileHeaderPr
     <View style={styles.container}>
       <Avatar name={member.firstName} size="xl" variant="green" style={styles.avatar} />
       <Text style={styles.name}>{displayName}</Text>
-      {member.nickname && (
-        <Text style={styles.fullName}>{fullName}</Text>
-      )}
-      {member.bio && (
-        <Text style={styles.bio}>{member.bio}</Text>
-      )}
+      {member.nickname && <Text style={styles.fullName}>{fullName}</Text>}
+      {member.bio && <Text style={styles.bio}>{member.bio}</Text>}
       {isCurrentUser && onEdit && (
         <Button
           title="Edit Profile"

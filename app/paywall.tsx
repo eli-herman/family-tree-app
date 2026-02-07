@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
 import { colors } from '../src/constants/colors';
 import { typography } from '../src/constants/typography';
 import { spacing, borderRadius } from '../src/constants/spacing';
-import { PRODUCTS, SubscriptionProduct } from '../src/types/subscription';
+import { PRODUCTS } from '../src/types/subscription';
 
 type PlanPeriod = 'monthly' | 'yearly';
 
@@ -80,12 +73,8 @@ export default function PaywallScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<PlanPeriod>('yearly');
   const [selectedTier, setSelectedTier] = useState<'family' | 'legacy'>('family');
 
-  const familyProduct = PRODUCTS.find(
-    (p) => p.tier === 'family' && p.period === selectedPeriod
-  );
-  const legacyProduct = PRODUCTS.find(
-    (p) => p.tier === 'legacy' && p.period === selectedPeriod
-  );
+  const familyProduct = PRODUCTS.find((p) => p.tier === 'family' && p.period === selectedPeriod);
+  const legacyProduct = PRODUCTS.find((p) => p.tier === 'legacy' && p.period === selectedPeriod);
 
   const familyFeatures = [
     'Unlimited family members',
@@ -139,10 +128,7 @@ export default function PaywallScreen() {
         {/* Period toggle */}
         <View style={styles.periodToggle}>
           <TouchableOpacity
-            style={[
-              styles.periodButton,
-              selectedPeriod === 'monthly' && styles.periodButtonActive,
-            ]}
+            style={[styles.periodButton, selectedPeriod === 'monthly' && styles.periodButtonActive]}
             onPress={() => setSelectedPeriod('monthly')}
           >
             <Text
@@ -155,10 +141,7 @@ export default function PaywallScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.periodButton,
-              selectedPeriod === 'yearly' && styles.periodButtonActive,
-            ]}
+            style={[styles.periodButton, selectedPeriod === 'yearly' && styles.periodButtonActive]}
             onPress={() => setSelectedPeriod('yearly')}
           >
             <Text
@@ -169,9 +152,7 @@ export default function PaywallScreen() {
             >
               Yearly
             </Text>
-            {selectedPeriod === 'yearly' && (
-              <Text style={styles.periodSavings}>Save 33%</Text>
-            )}
+            {selectedPeriod === 'yearly' && <Text style={styles.periodSavings}>Save 33%</Text>}
           </TouchableOpacity>
         </View>
 

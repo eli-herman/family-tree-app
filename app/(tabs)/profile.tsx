@@ -2,8 +2,8 @@ import React from 'react';
 import { View, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Href } from 'expo-router';
-import { Avatar, Card, Button } from '../../src/components/common';
-import { colors, typography, spacing, borderRadius } from '../../src/constants';
+import { Avatar, Button } from '../../src/components/common';
+import { colors, spacing, borderRadius } from '../../src/constants';
 import { mockFamilyMembers } from '../../src/utils/mockData';
 import { useAuthStore } from '../../src/stores';
 
@@ -29,11 +29,11 @@ export default function ProfileScreen() {
         <View style={styles.profileSection}>
           <Avatar name={user?.displayName || currentMember.firstName} size="xl" variant="green" />
           <Text style={styles.name}>
-            {user?.displayName || currentMember.nickname || `${currentMember.firstName} ${currentMember.lastName}`}
+            {user?.displayName ||
+              currentMember.nickname ||
+              `${currentMember.firstName} ${currentMember.lastName}`}
           </Text>
-          {currentMember.bio && (
-            <Text style={styles.bio}>{currentMember.bio}</Text>
-          )}
+          {currentMember.bio && <Text style={styles.bio}>{currentMember.bio}</Text>}
           <Button
             title="Edit Profile"
             onPress={handleEditProfile}
@@ -60,10 +60,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
           <View style={styles.settingsCard}>
-            <SettingsItem
-              label="Subscription"
-              onPress={() => router.push('/paywall' as Href)}
-            />
+            <SettingsItem label="Subscription" onPress={() => router.push('/paywall' as Href)} />
             <SettingsItem label="Notifications" />
             <SettingsItem label="Privacy" />
             <SettingsItem label="Help & Support" />
@@ -81,9 +78,20 @@ export default function ProfileScreen() {
   );
 }
 
-function SettingsItem({ label, isLast = false, onPress }: { label: string; isLast?: boolean; onPress?: () => void }) {
+function SettingsItem({
+  label,
+  isLast = false,
+  onPress,
+}: {
+  label: string;
+  isLast?: boolean;
+  onPress?: () => void;
+}) {
   return (
-    <TouchableOpacity style={[styles.settingsItem, !isLast && styles.settingsItemBorder]} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.settingsItem, !isLast && styles.settingsItemBorder]}
+      onPress={onPress}
+    >
       <Text style={styles.settingsLabel}>{label}</Text>
       <Text style={styles.settingsChevron}>›</Text>
     </TouchableOpacity>

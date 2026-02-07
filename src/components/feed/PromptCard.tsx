@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, typography, spacing, borderRadius } from '../../constants';
+import { colors, spacing, borderRadius } from '../../constants';
 import { Prompt } from '../../types';
 
 interface PromptCardProps {
