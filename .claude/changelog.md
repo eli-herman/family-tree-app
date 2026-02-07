@@ -5,6 +5,71 @@
 
 ---
 
+## 2026-02-07 - Firebase Auth Implementation
+
+### What Changed
+- **Full auth store rewrite** — `authStore.ts` now uses real Firebase Auth SDK
+  - `initialize()` subscribes to `onAuthStateChanged`, returns unsubscribe function
+  - `login()`, `signup()`, `logout()`, `resetPassword()` all call Firebase methods
+  - `firebaseUserToUser()` maps Firebase User to app User type
+  - `getAuthErrorMessage()` maps 10 Firebase error codes to user-friendly strings
+- **Auth screens** — new `app/(auth)/` route group:
+  - `login.tsx` — email/password with error banner, forgot password link
+  - `signup.tsx` — name/email/password/confirm with client-side validation
+  - `forgot-password.tsx` — email reset with success state
+  - `_layout.tsx` — Stack with fade animation
+- **Root layout rewrite** — `app/_layout.tsx` now has:
+  - `AuthGate` component for route protection (redirects based on auth state)
+  - `LoadingScreen` with "The Vine" branding while initializing
+  - Data loading gated behind `isAuthenticated`
+- **Firebase service** — `src/services/firebase.ts` updated:
+  - Auth with `getReactNativePersistence(AsyncStorage)` for session persistence
+  - Hot-reload safe: `initializeAuth` try/catch fallback to `getAuth`
+  - Config reads from `EXPO_PUBLIC_FIREBASE_*` env vars
+- **Profile screen** — now uses `useAuthStore` for display name and logout
+
+### Setup Required
+1. Create Firebase project at console.firebase.google.com
+2. Enable Email/Password auth provider
+3. Copy config values to `.env` (see `.env.example`)
+4. Test auth flow on device
+
+### Files Created
+- `app/(auth)/_layout.tsx`
+- `app/(auth)/login.tsx`
+- `app/(auth)/signup.tsx`
+- `app/(auth)/forgot-password.tsx`
+
+### Files Modified
+- `src/stores/authStore.ts` (full rewrite)
+- `src/services/firebase.ts` (auth persistence)
+- `app/_layout.tsx` (AuthGate + loading screen)
+- `app/(tabs)/profile.tsx` (auth integration)
+
+---
+
+## 2026-02-07 - Tree Layout Refactor (Deterministic Positions) [Codex]
+
+### What Changed
+- **Codex quick-002**: Added Mila (Ella+Preston's daughter) to mock data — 12 members, 4 generations
+- **Codex quick-003**: Fixed "max update depth exceeded" render loop by stabilizing couple-center callbacks
+- **Codex quick-004**: Major refactor — deterministic layout with computed frames, all connectors in single SVG overlay, absolute node positioning
+- **Codex quick-005** (in progress): Connector anchor alignment to spouse line midpoints, zoom bounds with maxScale floor of 1x
+- Selection ring uses overlay to avoid layout shifts on tap
+- `FamilyUnitNode` simplified (no longer handles measurement callbacks)
+- `TreeNode` accepts `style` prop for absolute positioning
+
+### Current Status
+- Connectors still reported as jumping; needs on-device verification
+- Zoom bounds behavior pending final confirmation
+- `NODE_HEIGHT = 128` hardcoded in tree.tsx — may mismatch actual rendered node height
+
+### Files Updated
+- `app/(tabs)/tree.tsx` (574 lines — deterministic layout engine)
+- `src/components/tree/TreeNode.tsx` (style prop, selection ring overlay)
+- `src/components/tree/FamilyUnitNode.tsx` (simplified, no measurement callbacks)
+- `src/utils/mockData.ts` (added Mila)
+
 ## 2026-02-02 - Subscription System Implementation
 
 ### What Changed

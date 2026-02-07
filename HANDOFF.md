@@ -1,5 +1,5 @@
 ---
-device: Mac.lan
+device: Elis-MacBook-Pro.local
 branch: main
 commit: a36bd2d
 timestamp: "2026-02-07T05:23:45Z"
@@ -8,80 +8,117 @@ timestamp: "2026-02-07T05:23:45Z"
 # Session Handoff
 
 ## Summary
-Last commit: `a36bd2d` on `main`
-> feat: add Firebase auth flow + deterministic tree layout
 
-Auth:
-- Full auth store rewrite with Firebase Auth SDK (login, signup, logout, resetPassword)
-- Auth screens: login, signup, forgot-password under app/(auth)/
-- AuthGate in _layout.tsx for route protection + LoadingScreen
-- Firebase service with AsyncStorage persistence (hot-reload safe)
-- Profile screen wired to authStore for display name and logout
+Two major workstreams completed across Claude + Codex sessions:
 
-Tree (Codex quick tasks 002-005):
-- Deterministic layout: computed frames + absolute positioning (no measurement jitter)
-- Single SVG overlay for all connectors (spouse lines, stems, rails, drops)
-- Added Mila (Ella+Preston's daughter) — 12 members, 4 generations
-- Fixed render loop from couple-center callbacks
-- Selection ring as overlay to prevent layout shifts
-- Zoom bounds: minScale fits full tree, maxScale floor of 1x
+1. **Firebase Auth Implementation** (new) — Full auth flow with login, signup, forgot-password screens. `authStore.ts` rewritten to use real Firebase Auth SDK with `onAuthStateChanged` listener. `_layout.tsx` has `AuthGate` for route protection. Auth screens require Firebase project setup to function (config uses env var placeholders — see `.env.example`).
 
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+2. **Tree Deterministic Layout** (Codex quick tasks 002-005) — Tree screen rewritten from measurement-based to deterministic computed layout. All node positions calculated upfront via `layoutUnit()` + `buildTreeLayout()`, rendered with absolute positioning. Connectors drawn in single SVG overlay. Mila added as 4th-generation member. Connector jumping still reported per Codex sessions — needs on-device verification.
 
 ## Files Changed
 
-- app/(auth)/_layout.tsx
-- app/(auth)/forgot-password.tsx
-- app/(auth)/login.tsx
-- app/(auth)/signup.tsx
-- app/(tabs)/profile.tsx
-- app/(tabs)/tree.tsx
-- app/_layout.tsx
-- package-lock.json
-- package.json
-- src/components/tree/FamilyUnitNode.tsx
-- src/components/tree/TreeNode.tsx
-- src/components/tree/VineConnector.tsx
-- src/components/tree/index.ts
-- src/services/firebase.ts
-- src/stores/authStore.ts
-- src/stores/familyStore.ts
-- src/types/index.ts
-- src/types/tree.ts
-- src/utils/mockData.ts
+### Auth (New)
+- `app/(auth)/_layout.tsx` — Stack with fade animation
+- `app/(auth)/login.tsx` — Email/password login with error handling
+- `app/(auth)/signup.tsx` — Name/email/password/confirm with client validation
+- `app/(auth)/forgot-password.tsx` — Email reset with success state
+- `src/stores/authStore.ts` — Full rewrite: Firebase Auth SDK integration
+- `src/services/firebase.ts` — Auth persistence with AsyncStorage
+- `app/_layout.tsx` — AuthGate redirect pattern, LoadingScreen
+- `app/(tabs)/profile.tsx` — Uses authStore for display name + logout
 
-## Diff Stats
+### Tree Refactor (Codex)
+- `app/(tabs)/tree.tsx` — 574 lines, deterministic layout engine with single SVG connector overlay
+- `src/components/tree/TreeNode.tsx` — Added `style` prop, selection ring as overlay
+- `src/components/tree/FamilyUnitNode.tsx` — Simplified (no measurement callbacks)
+- `src/components/tree/index.ts` — Updated exports
+- `src/utils/mockData.ts` — Added Mila (Ella+Preston's daughter)
+- `src/stores/familyStore.ts` — buildFamilyTree with recursive buildUnit
+
+### Documentation
+- `.planning/STATE.md` — Updated with auth work, Codex tasks, blockers
+- `.claude/changelog.md` — Auth entry + Codex tree refactor entry
+- `.claude/agents/updates-log.md` — Auth + tree layout refactor notes
+- `HANDOFF.md` — This file
+
+## Architecture: Tree Screen (Current State)
+
 ```
- app/(auth)/_layout.tsx                 |  12 +
- app/(auth)/forgot-password.tsx         | 211 ++++++++++++
- app/(auth)/login.tsx                   | 226 +++++++++++++
- app/(auth)/signup.tsx                  | 268 +++++++++++++++
- app/(tabs)/profile.tsx                 |   8 +-
- app/(tabs)/tree.tsx                    | 595 +++++++++++++++++++++++----------
- app/_layout.tsx                        |  84 ++++-
- package-lock.json                      | 134 ++------
- package.json                           |   8 +-
- src/components/tree/FamilyUnitNode.tsx | 106 ++----
- src/components/tree/TreeNode.tsx       |  52 ++-
- src/components/tree/VineConnector.tsx  |   2 +-
- src/components/tree/index.ts           |  12 +-
- src/services/firebase.ts               |  17 +-
- src/stores/authStore.ts                | 138 +++++++-
- src/stores/familyStore.ts              |  67 +++-
- src/types/index.ts                     |   1 +
- src/types/tree.ts                      |  20 ++
- src/utils/mockData.ts                  |  56 ++++
- 19 files changed, 1605 insertions(+), 412 deletions(-)
+tree.tsx
+  layoutUnit(unit) → { width, height, frames, variants }  // recursive
+  buildTreeLayout(centerUnit, grandparents) → TreeLayout   // full tree
+
+  Rendering:
+  - Absolute-positioned <TreeNode> for each member (from computed frames)
+  - Single <Svg> overlay with <Line> segments for all connectors
+  - Connectors: spouse lines + stems + rails + drops
+  - No measurement-driven re-renders
 ```
 
-## Active Tasks
-_Update manually or via MCP tool._
+Key constants in `tree.tsx`:
+- `NODE_WIDTH = 100`, `NODE_HEIGHT = 128` (must match actual TreeNode render size)
+- `CONNECTOR_GAP = 48`, `COUPLE_GAP = 16`, `SPOUSE_GAP = 48`
+- `ZOOM_IN_MULTIPLIER = 3`, maxScale floor of 1x
 
-## Blockers
-_None detected._
+## Architecture: Auth Flow
 
-## Next Steps
-_See AI Summary below for suggestions._
+```
+_layout.tsx
+  RootLayout
+    ├── useEffect → authStore.initialize() (onAuthStateChanged listener)
+    ├── AuthGate
+    │   ├── !isInitialized → LoadingScreen ("The Vine" branding)
+    │   ├── !isAuthenticated + not in (auth) → Redirect to /(auth)/login
+    │   ├── isAuthenticated + in (auth) → Redirect to /(tabs)
+    │   └── else → render children
+    └── Stack: (tabs), (auth), member/[id]
 
-## AI Summary
-This commit introduces Firebase authentication and a deterministic tree layout for the application. It includes new authentication screens, an AuthGate for route protection, and updates to the family tree component for smoother rendering and better user experience. The changes are essential for enhancing security and usability, making it easier for developers to switch devices or collaborate on the project.
+authStore.ts
+  ├── initialize() → onAuthStateChanged subscription
+  ├── login(email, password) → signInWithEmailAndPassword
+  ├── signup(email, password, displayName) → createUserWithEmailAndPassword + updateProfile
+  ├── logout() → signOut
+  ├── resetPassword(email) → sendPasswordResetEmail
+  └── getAuthErrorMessage(code) → user-friendly string (10 cases)
+```
+
+## Open Issues
+
+1. **Connector jumping** — Codex reports connectors still jump on tap. The deterministic layout should fix this but needs on-device verification. If it persists, check `NODE_HEIGHT = 128` vs actual rendered height.
+
+2. **Firebase project not created** — Auth screens exist but Firebase project needs to be set up. Until then, the app will show auth screens but login won't work. See `.env.example` for required vars.
+
+3. **Dead code** — `VineConnector.tsx` exports (`FamilyConnector`, `SpouseConnector`, `GenerationConnector`) are no longer used by `tree.tsx`. `FamilyUnitNode` is also not used by tree.tsx (it renders everything flat). These could be cleaned up.
+
+4. **Codex quick-005** — Still marked in-progress. The zoom bounds and connector anchor work was applied but not formally closed.
+
+## Next Steps (Priority Order)
+
+1. **Verify tree on device** — Run `npx expo start`, check connector stability and zoom behavior
+2. **Create Firebase project** — Set up project, enable Email/Password auth, add config to `.env`
+3. **Add dev mode bypass** — Consider a toggle to skip auth during development so tree/feed screens remain accessible without Firebase
+4. **Phase 2: Paywall Polish** — Next roadmap phase per `.planning/ROADMAP.md`
+5. **Clean up dead code** — Remove unused VineConnector exports and simplify FamilyUnitNode
+
+## Reference Files
+
+| File | Purpose |
+|------|---------|
+| `.planning/STATE.md` | Full project state with all decisions and progress |
+| `.planning/ROADMAP.md` | 8-phase roadmap with requirements |
+| `.claude/changelog.md` | Chronological decisions and learnings |
+| `.env.example` | Firebase config template |
+| `.codex/quick/` | Codex task plans and summaries (002-005) |
+| `.planning/quick/` | Claude GSD task plans (001) |
+
+## Mock Data: Herman Family (12 Members, 4 Generations)
+
+```
+Gen 0: Peggy + Ron (maternal)     James + Linda (paternal)
+              |                          |
+Gen 1:     Shelby ──────────────── Timothy
+              |
+Gen 2: Ella+Preston   Eli   Bennett   Ember
+              |
+Gen 3:     Mila
+```
