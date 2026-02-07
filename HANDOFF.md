@@ -1,124 +1,74 @@
 ---
-device: Elis-MacBook-Pro.local
+device: Mac.lan
 branch: main
-commit: a36bd2d
-timestamp: "2026-02-07T05:23:45Z"
+commit: 31624c0
+timestamp: "2026-02-07T05:24:50Z"
 ---
 
 # Session Handoff
 
 ## Summary
+Last commit: `31624c0` on `main`
+> docs: update STATE, changelog, HANDOFF with auth + Codex work tracking
 
-Two major workstreams completed across Claude + Codex sessions:
+- STATE.md: added auth decisions, Codex quick tasks 002-005, blockers
+- changelog.md: Firebase auth entry + Codex tree refactor entry
+- updates-log.md: auth implementation notes for other agents
+- HANDOFF.md: comprehensive handoff with architecture diagrams, open issues, next steps
+- Added .codex/quick/ task plans and summaries (002-005)
 
-1. **Firebase Auth Implementation** (new) — Full auth flow with login, signup, forgot-password screens. `authStore.ts` rewritten to use real Firebase Auth SDK with `onAuthStateChanged` listener. `_layout.tsx` has `AuthGate` for route protection. Auth screens require Firebase project setup to function (config uses env var placeholders — see `.env.example`).
-
-2. **Tree Deterministic Layout** (Codex quick tasks 002-005) — Tree screen rewritten from measurement-based to deterministic computed layout. All node positions calculated upfront via `layoutUnit()` + `buildTreeLayout()`, rendered with absolute positioning. Connectors drawn in single SVG overlay. Mila added as 4th-generation member. Connector jumping still reported per Codex sessions — needs on-device verification.
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 ## Files Changed
 
-### Auth (New)
-- `app/(auth)/_layout.tsx` — Stack with fade animation
-- `app/(auth)/login.tsx` — Email/password login with error handling
-- `app/(auth)/signup.tsx` — Name/email/password/confirm with client validation
-- `app/(auth)/forgot-password.tsx` — Email reset with success state
-- `src/stores/authStore.ts` — Full rewrite: Firebase Auth SDK integration
-- `src/services/firebase.ts` — Auth persistence with AsyncStorage
-- `app/_layout.tsx` — AuthGate redirect pattern, LoadingScreen
-- `app/(tabs)/profile.tsx` — Uses authStore for display name + logout
+- .claude/agents/status-board.md
+- .claude/agents/updates-log.md
+- .claude/changelog.md
+- .codex/STATE.md
+- .codex/quick/002-add-ella-preston-child/002-PLAN.md
+- .codex/quick/002-add-ella-preston-child/002-SUMMARY.md
+- .codex/quick/003-fix-nested-connector-loop/003-PLAN.md
+- .codex/quick/003-fix-nested-connector-loop/003-SUMMARY.md
+- .codex/quick/004-branch-style-connectors/004-PLAN.md
+- .codex/quick/004-branch-style-connectors/004-SUMMARY.md
+- .codex/quick/005-fix-connector-anchors-zoom-limits/005-PLAN.md
+- .planning/STATE.md
+- HANDOFF.md
 
-### Tree Refactor (Codex)
-- `app/(tabs)/tree.tsx` — 574 lines, deterministic layout engine with single SVG connector overlay
-- `src/components/tree/TreeNode.tsx` — Added `style` prop, selection ring as overlay
-- `src/components/tree/FamilyUnitNode.tsx` — Simplified (no measurement callbacks)
-- `src/components/tree/index.ts` — Updated exports
-- `src/utils/mockData.ts` — Added Mila (Ella+Preston's daughter)
-- `src/stores/familyStore.ts` — buildFamilyTree with recursive buildUnit
-
-### Documentation
-- `.planning/STATE.md` — Updated with auth work, Codex tasks, blockers
-- `.claude/changelog.md` — Auth entry + Codex tree refactor entry
-- `.claude/agents/updates-log.md` — Auth + tree layout refactor notes
-- `HANDOFF.md` — This file
-
-## Architecture: Tree Screen (Current State)
-
+## Diff Stats
 ```
-tree.tsx
-  layoutUnit(unit) → { width, height, frames, variants }  // recursive
-  buildTreeLayout(centerUnit, grandparents) → TreeLayout   // full tree
-
-  Rendering:
-  - Absolute-positioned <TreeNode> for each member (from computed frames)
-  - Single <Svg> overlay with <Line> segments for all connectors
-  - Connectors: spouse lines + stems + rails + drops
-  - No measurement-driven re-renders
+ .claude/agents/status-board.md                     |   9 +-
+ .claude/agents/updates-log.md                      |  56 +++++++
+ .claude/changelog.md                               |  65 ++++++++
+ .codex/STATE.md                                    |  16 ++
+ .../quick/002-add-ella-preston-child/002-PLAN.md   |  71 +++++++++
+ .../002-add-ella-preston-child/002-SUMMARY.md      |  78 +++++++++
+ .../003-fix-nested-connector-loop/003-PLAN.md      |  76 +++++++++
+ .../003-fix-nested-connector-loop/003-SUMMARY.md   |  79 ++++++++++
+ .../quick/004-branch-style-connectors/004-PLAN.md  |  81 ++++++++++
+ .../004-branch-style-connectors/004-SUMMARY.md     |  86 ++++++++++
+ .../005-PLAN.md                                    | 134 ++++++++++++++++
+ .planning/STATE.md                                 |  44 ++++--
+ HANDOFF.md                                         | 175 +++++++++++++--------
+ 13 files changed, 891 insertions(+), 79 deletions(-)
 ```
 
-Key constants in `tree.tsx`:
-- `NODE_WIDTH = 100`, `NODE_HEIGHT = 128` (must match actual TreeNode render size)
-- `CONNECTOR_GAP = 48`, `COUPLE_GAP = 16`, `SPOUSE_GAP = 48`
-- `ZOOM_IN_MULTIPLIER = 3`, maxScale floor of 1x
+## Active Tasks
+_Update manually or via MCP tool._
 
-## Architecture: Auth Flow
+## Blockers
+_None detected._
 
-```
-_layout.tsx
-  RootLayout
-    ├── useEffect → authStore.initialize() (onAuthStateChanged listener)
-    ├── AuthGate
-    │   ├── !isInitialized → LoadingScreen ("The Vine" branding)
-    │   ├── !isAuthenticated + not in (auth) → Redirect to /(auth)/login
-    │   ├── isAuthenticated + in (auth) → Redirect to /(tabs)
-    │   └── else → render children
-    └── Stack: (tabs), (auth), member/[id]
+## Next Steps
+_See AI Summary below for suggestions._
 
-authStore.ts
-  ├── initialize() → onAuthStateChanged subscription
-  ├── login(email, password) → signInWithEmailAndPassword
-  ├── signup(email, password, displayName) → createUserWithEmailAndPassword + updateProfile
-  ├── logout() → signOut
-  ├── resetPassword(email) → sendPasswordResetEmail
-  └── getAuthErrorMessage(code) → user-friendly string (10 cases)
-```
+## AI Summary
+This commit updates several files related to authentication and project tracking for a developer switching devices:
 
-## Open Issues
+1. **STATE.md**: Added authentication decisions, Codex quick tasks 002-005, and blockers.
+2. **changelog.md**: Included Firebase auth entry and Codex tree refactor entry.
+3. **updates-log.md**: Added notes on the auth implementation for other agents.
+4. **HANDOFF.md**: Updated with comprehensive handoff information, including architecture diagrams, open issues, and next steps.
+5. **.codex/quick/**: Added task plans and summaries for tasks 002-005.
 
-1. **Connector jumping** — Codex reports connectors still jump on tap. The deterministic layout should fix this but needs on-device verification. If it persists, check `NODE_HEIGHT = 128` vs actual rendered height.
-
-2. **Firebase project not created** — Auth screens exist but Firebase project needs to be set up. Until then, the app will show auth screens but login won't work. See `.env.example` for required vars.
-
-3. **Dead code** — `VineConnector.tsx` exports (`FamilyConnector`, `SpouseConnector`, `GenerationConnector`) are no longer used by `tree.tsx`. `FamilyUnitNode` is also not used by tree.tsx (it renders everything flat). These could be cleaned up.
-
-4. **Codex quick-005** — Still marked in-progress. The zoom bounds and connector anchor work was applied but not formally closed.
-
-## Next Steps (Priority Order)
-
-1. **Verify tree on device** — Run `npx expo start`, check connector stability and zoom behavior
-2. **Create Firebase project** — Set up project, enable Email/Password auth, add config to `.env`
-3. **Add dev mode bypass** — Consider a toggle to skip auth during development so tree/feed screens remain accessible without Firebase
-4. **Phase 2: Paywall Polish** — Next roadmap phase per `.planning/ROADMAP.md`
-5. **Clean up dead code** — Remove unused VineConnector exports and simplify FamilyUnitNode
-
-## Reference Files
-
-| File | Purpose |
-|------|---------|
-| `.planning/STATE.md` | Full project state with all decisions and progress |
-| `.planning/ROADMAP.md` | 8-phase roadmap with requirements |
-| `.claude/changelog.md` | Chronological decisions and learnings |
-| `.env.example` | Firebase config template |
-| `.codex/quick/` | Codex task plans and summaries (002-005) |
-| `.planning/quick/` | Claude GSD task plans (001) |
-
-## Mock Data: Herman Family (12 Members, 4 Generations)
-
-```
-Gen 0: Peggy + Ron (maternal)     James + Linda (paternal)
-              |                          |
-Gen 1:     Shelby ──────────────── Timothy
-              |
-Gen 2: Ella+Preston   Eli   Bennett   Ember
-              |
-Gen 3:     Mila
-```
+These changes aim to streamline authentication processes, document project progress, and ensure a smooth transition between devices. Review the updated files for detailed information on specific changes and next steps.
