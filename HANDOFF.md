@@ -2,7 +2,7 @@
 device: Mac.lan
 branch: main
 commit: 862be8c
-timestamp: '2026-02-07T20:33:52Z'
+timestamp: '2026-02-08T02:31:50Z'
 ---
 
 # Session Handoff
@@ -35,6 +35,7 @@ Last commit: `862be8c` on `main`
 - Added app-level ErrorBoundary with safe fallback UI and retry action.
 - Added accessibility labels/roles to interactive controls across the app.
 - Removed relationship labels (Parent/Grandparent/Sibling) from tree nodes; kept relationships for layout only.
+- Tree now re-centers focus on the tapped member; add-sibling anchors to a parent so new siblings appear in the tree.
 - Added Dependabot config for npm + GitHub Actions updates.
 - Added README note for enabling GitHub secret scanning.
 

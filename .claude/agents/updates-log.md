@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-02-08 - Tree Focus Anchor After Add
+
+### Changes
+
+- Tree now sets focus to the tapped member when opening their profile
+- Add-sibling flow re-centers on a parent so newly added siblings appear in the tree
+
+### Files Affected
+
+- `app/(tabs)/tree.tsx`
+- `app/member/[id].tsx`
+- `HANDOFF.md`
+- `.claude/agents/status-board.md`
+
+### For Other Agents
+
+- This is a UX-first fix; full extended-family rendering is still out of scope.
+
 ## 2026-02-07 - Accessibility Pass + Tree Label Cleanup
 
 ### Changes

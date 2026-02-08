@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Avatar, Button } from '../../src/components/common';
 import { colors, spacing, borderRadius } from '../../src/constants';
-import { useFamilyStore } from '../../src/stores';
+import { useFamilyStore, useUserStore } from '../../src/stores';
 import { NewMemberInput, ParentRelationshipType } from '../../src/types';
 
 type AddMode = 'spouse' | 'child' | 'sibling' | 'parent';
@@ -36,6 +36,8 @@ export default function MemberDetailScreen() {
   const addChild = useFamilyStore((state) => state.addChild);
   const addSibling = useFamilyStore((state) => state.addSibling);
   const addParent = useFamilyStore((state) => state.addParent);
+  const getParentsOf = useFamilyStore((state) => state.getParentsOf);
+  const setCurrentMemberId = useUserStore((state) => state.setCurrentMemberId);
 
   const member = memberId ? getMemberById(memberId) : undefined;
 
@@ -94,15 +96,21 @@ export default function MemberDetailScreen() {
     setIsSaving(true);
     setFormError(null);
     try {
+      let anchorId = member.id;
       if (addMode === 'spouse') {
         await addSpouse(member.id, form);
       } else if (addMode === 'child') {
         await addChild(member.id, form);
       } else if (addMode === 'sibling') {
         await addSibling(member.id, form);
+        const parents = getParentsOf(member.id);
+        if (parents.length > 0) {
+          anchorId = parents[0].id;
+        }
       } else {
         await addParent(member.id, form);
       }
+      setCurrentMemberId(anchorId);
       closeAddModal();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Failed to add member.');

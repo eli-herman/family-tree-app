@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { TreeNode, TREE_NODE_HEIGHT, TREE_NODE_WIDTH } from '../../src/components/tree';
 import { colors, spacing } from '../../src/constants';
 import { FamilyMember, FamilyUnit, isFamilyUnit } from '../../src/types';
-import { useFamilyStore } from '../../src/stores';
+import { useFamilyStore, useUserStore } from '../../src/stores';
 
 const SPOUSE_GAP = spacing['2xl']; // 48px between ancestor branches
 const COUPLE_GAP = spacing.md; // 16px between spouses within a couple
@@ -246,6 +246,7 @@ export default function TreeScreen() {
   const isLoading = useFamilyStore((state) => state.isLoading);
   const buildFamilyTree = useFamilyStore((state) => state.buildFamilyTree);
   const members = useFamilyStore((state) => state.members);
+  const setCurrentMemberId = useUserStore((state) => state.setCurrentMemberId);
 
   // Gesture shared values
   const scale = useSharedValue(1);
@@ -323,6 +324,7 @@ export default function TreeScreen() {
   }));
 
   const handleMemberPress = (member: FamilyMember) => {
+    setCurrentMemberId(member.id);
     setSelectedMember(member);
     router.push(`/member/${member.id}`);
   };
