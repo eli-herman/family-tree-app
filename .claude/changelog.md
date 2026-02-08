@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-02-08 - Tree Focus Anchor After Add
+
+### What Changed
+
+- Tree now re-centers on the tapped member
+- Add-sibling flow re-centers on a parent so new siblings appear in the current view
+
+### Files Updated
+
+- `app/(tabs)/tree.tsx`
+- `app/member/[id].tsx`
+
 ## 2026-02-07 - Accessibility Pass + Tree Label Cleanup
 
 ### What Changed

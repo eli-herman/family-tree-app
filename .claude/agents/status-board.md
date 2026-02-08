@@ -15,6 +15,17 @@ _No active tasks_
 
 <!-- Move completed tasks here -->
 
+### Tree Focus Anchor After Add
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** Re-center tree on tapped member; anchor sibling adds to parent so new nodes appear
+- **Files:** app/(tabs)/tree.tsx, app/member/[id].tsx, HANDOFF.md
+- **Started:** 2026-02-08T02:20:00Z
+- **Completed:** 2026-02-08T02:31:50Z
+- **Blockers:** None
+- **Notes:** Aims to make newly added siblings visible by focusing on a parent unit.
+
 ### Accessibility Pass + Tree Label Cleanup
 
 - **Agent:** Codex
