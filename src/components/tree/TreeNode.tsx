@@ -54,19 +54,6 @@ export function TreeNode({
   const displayName = member.nickname || member.firstName;
   const config = scaleConfig[scale];
 
-  const getRelationLabel = () => {
-    if (member.relationships.some(r => r.type === 'child' && !member.relationships.some(r2 => r2.type === 'parent'))) {
-      return 'Grandparent';
-    }
-    if (member.relationships.some(r => r.type === 'parent') && member.relationships.some(r => r.type === 'child')) {
-      return 'Parent';
-    }
-    if (member.relationships.some(r => r.type === 'sibling')) {
-      return 'Sibling';
-    }
-    return '';
-  };
-
   return (
     <TouchableOpacity
       style={[
@@ -76,15 +63,16 @@ export function TreeNode({
       ]}
       onPress={() => onPress(member)}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${displayName}'s profile`}
+      accessibilityHint="Opens member details"
+      accessibilityState={{ selected: !!isSelected }}
     >
       {isSelected && <View pointerEvents="none" style={styles.selectedRing} />}
       <Avatar name={displayName} size={config.avatar} variant={variant} />
       <Text style={[styles.name, { fontSize: config.fontSize }]} numberOfLines={1}>
         {displayName}
       </Text>
-      {scale === 'normal' && (
-        <Text style={styles.relation}>{getRelationLabel()}</Text>
-      )}
     </TouchableOpacity>
   );
 }
@@ -102,11 +90,13 @@ export function VineCorner({ direction = 'left' }: { direction?: 'left' | 'right
   return (
     <View style={styles.vineCornerContainer}>
       <View style={[styles.vineVertical, { height: 12 }]} />
-      <View style={[
-        styles.vineHorizontal,
-        { width: 20 },
-        direction === 'left' ? { marginRight: 'auto' } : { marginLeft: 'auto' }
-      ]} />
+      <View
+        style={[
+          styles.vineHorizontal,
+          { width: 20 },
+          direction === 'left' ? { marginRight: 'auto' } : { marginLeft: 'auto' },
+        ]}
+      />
     </View>
   );
 }
@@ -136,11 +126,6 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     marginTop: spacing.xs,
     textAlign: 'center',
-  },
-  relation: {
-    fontSize: 11,
-    color: colors.text.tertiary,
-    marginTop: 2,
   },
   // Circuit-like vines
   vineVertical: {

@@ -56,7 +56,14 @@ export function FeedItem({ item, onHeart, currentUserId }: FeedItemProps) {
       )}
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.heartButton} onPress={() => onHeart(item.id)}>
+        <TouchableOpacity
+          style={styles.heartButton}
+          onPress={() => onHeart(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={isHearted ? 'Remove heart' : 'Add heart'}
+          accessibilityHint="Toggles your reaction to this post"
+          accessibilityState={{ selected: isHearted }}
+        >
           <Text style={[styles.heartIcon, isHearted && styles.heartIconActive]}>
             {isHearted ? '♥' : '♡'}
           </Text>

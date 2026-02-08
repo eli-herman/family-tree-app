@@ -15,6 +15,28 @@ _No active tasks_
 
 <!-- Move completed tasks here -->
 
+### Accessibility Pass + Tree Label Cleanup
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** A11y labels/roles on touchables + remove relation labels from tree nodes
+- **Files:** app/(auth)/_.tsx, app/(tabs)/profile.tsx, app/(tabs)/tree.tsx, app/member/[id].tsx, app/paywall.tsx, src/components/common/_, src/components/feed/\*, src/components/tree/TreeNode.tsx, HANDOFF.md
+- **Started:** 2026-02-07T20:12:00Z
+- **Completed:** 2026-02-07T20:33:52Z
+- **Blockers:** None
+- **Notes:** Buttons and chips now announce labels; tree nodes no longer show relationship text under names.
+
+### App Error Boundary
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** Global error boundary + fallback UI for crashes
+- **Files:** app/\_layout.tsx, src/components/common/ErrorBoundary.tsx, src/components/common/index.ts, HANDOFF.md
+- **Started:** 2026-02-07T20:05:00Z
+- **Completed:** 2026-02-07T20:12:00Z
+- **Blockers:** None
+- **Notes:** Added SafeArea-backed fallback with retry action; wired at app root.
+
 ### Fix Tree Connectors + Zoom Bounds
 
 - **Agent:** Codex

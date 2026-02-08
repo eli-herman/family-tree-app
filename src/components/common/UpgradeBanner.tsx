@@ -27,20 +27,26 @@ export function UpgradeBanner({
   return (
     <View style={[styles.container, isWarning && styles.containerWarning]}>
       <View style={styles.content}>
-        <Text style={[styles.title, isWarning && styles.titleWarning]}>
-          {title}
-        </Text>
+        <Text style={[styles.title, isWarning && styles.titleWarning]}>{title}</Text>
         <Text style={styles.description}>{description}</Text>
       </View>
       <View style={styles.actions}>
         <TouchableOpacity
           style={styles.upgradeButton}
           onPress={() => router.push('/paywall' as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="Upgrade"
+          accessibilityHint="Opens subscription plans"
         >
           <Text style={styles.upgradeButtonText}>Upgrade</Text>
         </TouchableOpacity>
         {onDismiss && (
-          <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
+          <TouchableOpacity
+            style={styles.dismissButton}
+            onPress={onDismiss}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss upgrade prompt"
+          >
             <Text style={styles.dismissButtonText}>Later</Text>
           </TouchableOpacity>
         )}
@@ -54,7 +60,7 @@ export function UpgradeBanner({
  */
 export function shouldShowUpgradeBanner(
   currentCount: number,
-  limit: number
+  limit: number,
 ): 'none' | 'info' | 'warning' {
   if (limit === Infinity) return 'none';
   const percentage = currentCount / limit;

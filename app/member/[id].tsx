@@ -116,7 +116,12 @@ export default function MemberDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Member not found</Text>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            accessibilityHint="Returns to the previous screen"
+          >
             <Text style={styles.backLink}>Go back</Text>
           </TouchableOpacity>
         </View>
@@ -127,7 +132,13 @@ export default function MemberDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.closeButton}
+          accessibilityRole="button"
+          accessibilityLabel="Close member profile"
+          accessibilityHint="Returns to the family tree"
+        >
           <Text style={styles.closeText}>Close</Text>
         </TouchableOpacity>
       </View>
@@ -135,14 +146,16 @@ export default function MemberDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
           <Avatar name={member.firstName} size="xl" variant="green" />
-          <Text style={styles.name}>
+          <Text style={styles.name} accessibilityRole="header">
             {member.nickname || `${member.firstName} ${member.lastName}`}
           </Text>
           {member.bio && <Text style={styles.bio}>{member.bio}</Text>}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Add Family</Text>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            Add Family
+          </Text>
           <View style={styles.addRow}>
             <Button
               title="Add Spouse"
@@ -150,6 +163,7 @@ export default function MemberDetailScreen() {
               size="sm"
               onPress={() => openAddModal('spouse')}
               disabled={hasSpouse}
+              accessibilityHint="Adds a spouse connected to this member"
             />
             <Button
               title="Add Parent"
@@ -157,6 +171,7 @@ export default function MemberDetailScreen() {
               size="sm"
               onPress={() => openAddModal('parent')}
               disabled={!canAddParent}
+              accessibilityHint="Adds a parent connected to this member"
             />
             <Button
               title="Add Child"
@@ -164,6 +179,7 @@ export default function MemberDetailScreen() {
               size="sm"
               onPress={() => openAddModal('child')}
               disabled={false}
+              accessibilityHint="Adds a child connected to this member"
             />
             <Button
               title="Add Sibling"
@@ -171,6 +187,7 @@ export default function MemberDetailScreen() {
               size="sm"
               onPress={() => openAddModal('sibling')}
               disabled={!canAddSibling}
+              accessibilityHint="Adds a sibling connected to this member"
             />
           </View>
           {!hasSpouse && (
@@ -188,7 +205,9 @@ export default function MemberDetailScreen() {
 
         {relationships.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Relationships</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              Relationships
+            </Text>
             <View style={styles.card}>
               {relationships.map((rel, index) => (
                 <View
@@ -212,7 +231,9 @@ export default function MemberDetailScreen() {
 
         {member.birthDate && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Details</Text>
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              Details
+            </Text>
             <View style={styles.card}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Birthday</Text>
@@ -235,7 +256,7 @@ export default function MemberDetailScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
+            <Text style={styles.modalTitle} accessibilityRole="header">
               {addMode === 'spouse'
                 ? 'Add Spouse'
                 : addMode === 'child'
@@ -268,6 +289,9 @@ export default function MemberDetailScreen() {
                   key={option}
                   style={[styles.genderChip, form.gender === option && styles.genderChipActive]}
                   onPress={() => setForm((prev) => ({ ...prev, gender: option }))}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Select ${option === 'female' ? 'female' : 'male'} gender`}
+                  accessibilityState={{ selected: form.gender === option }}
                 >
                   <Text
                     style={[styles.genderLabel, form.gender === option && styles.genderLabelActive]}
@@ -288,6 +312,9 @@ export default function MemberDetailScreen() {
                       form.relationshipType === option.id && styles.relationshipChipActive,
                     ]}
                     onPress={() => setForm((prev) => ({ ...prev, relationshipType: option.id }))}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Set relationship type to ${option.label}`}
+                    accessibilityState={{ selected: form.relationshipType === option.id }}
                   >
                     <Text
                       style={[

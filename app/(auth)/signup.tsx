@@ -67,7 +67,9 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Create Account</Text>
+            <Text style={styles.formTitle} accessibilityRole="header">
+              Create Account
+            </Text>
 
             {displayError && (
               <View style={styles.errorBanner}>
@@ -161,7 +163,12 @@ export default function SignupScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Log in"
+              accessibilityHint="Returns to the login screen"
+            >
               <Text style={styles.footerLink}>Log In</Text>
             </TouchableOpacity>
           </View>

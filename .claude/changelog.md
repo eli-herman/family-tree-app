@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-02-07 - Accessibility Pass + Tree Label Cleanup
+
+### What Changed
+
+- Added accessibility labels/roles/hints to interactive controls across the app
+- Removed relationship labels under tree node names (kept layout logic intact)
+
+### Files Updated
+
+- `app/(auth)/login.tsx`
+- `app/(auth)/signup.tsx`
+- `app/(auth)/forgot-password.tsx`
+- `app/(tabs)/profile.tsx`
+- `app/(tabs)/tree.tsx`
+- `app/member/[id].tsx`
+- `app/paywall.tsx`
+- `src/components/common/Button.tsx`
+- `src/components/common/FeatureGate.tsx`
+- `src/components/common/UpgradeBanner.tsx`
+- `src/components/feed/FeedItem.tsx`
+- `src/components/feed/PromptCard.tsx`
+- `src/components/tree/TreeNode.tsx`
+
+## 2026-02-07 - App Error Boundary
+
+### What Changed
+
+- Added a global `ErrorBoundary` with a safe fallback UI and retry action
+- Wrapped the root layout so unexpected render errors show the fallback instead of a blank screen
+
+### Files Updated
+
+- `src/components/common/ErrorBoundary.tsx`
+- `src/components/common/index.ts`
+- `app/_layout.tsx`
+
 ## 2026-02-07 - README Badges + Banner Removal
 
 ### What Changed

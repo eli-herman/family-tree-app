@@ -38,6 +38,10 @@ function TierCard({
       ]}
       onPress={onSelect}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${name} plan, ${price} per ${period}`}
+      accessibilityHint="Selects this plan"
+      accessibilityState={{ selected: isSelected }}
     >
       {isRecommended && (
         <View style={styles.recommendedBadge}>
@@ -108,10 +112,18 @@ export default function PaywallScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Close paywall"
+            accessibilityHint="Returns to the previous screen"
+          >
             <Text style={styles.closeText}>×</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Grow Your Family Tree</Text>
+          <Text style={styles.title} accessibilityRole="header">
+            Grow Your Family Tree
+          </Text>
           <Text style={styles.subtitle}>
             Unlock unlimited memories and connections for your whole family
           </Text>
@@ -130,6 +142,10 @@ export default function PaywallScreen() {
           <TouchableOpacity
             style={[styles.periodButton, selectedPeriod === 'monthly' && styles.periodButtonActive]}
             onPress={() => setSelectedPeriod('monthly')}
+            accessibilityRole="button"
+            accessibilityLabel="Monthly billing"
+            accessibilityHint="Switches to monthly pricing"
+            accessibilityState={{ selected: selectedPeriod === 'monthly' }}
           >
             <Text
               style={[
@@ -143,6 +159,10 @@ export default function PaywallScreen() {
           <TouchableOpacity
             style={[styles.periodButton, selectedPeriod === 'yearly' && styles.periodButtonActive]}
             onPress={() => setSelectedPeriod('yearly')}
+            accessibilityRole="button"
+            accessibilityLabel="Yearly billing"
+            accessibilityHint="Switches to yearly pricing"
+            accessibilityState={{ selected: selectedPeriod === 'yearly' }}
           >
             <Text
               style={[
@@ -190,12 +210,24 @@ export default function PaywallScreen() {
 
       {/* Subscribe button */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.subscribeButton} onPress={handleSubscribe}>
+        <TouchableOpacity
+          style={styles.subscribeButton}
+          onPress={handleSubscribe}
+          accessibilityRole="button"
+          accessibilityLabel={`Continue with ${selectedTier === 'family' ? 'Family' : 'Legacy'} plan`}
+          accessibilityHint="Starts the subscription purchase flow"
+        >
           <Text style={styles.subscribeButtonText}>
             Continue with {selectedTier === 'family' ? 'Family' : 'Legacy'}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.restoreButton} onPress={handleRestore}>
+        <TouchableOpacity
+          style={styles.restoreButton}
+          onPress={handleRestore}
+          accessibilityRole="button"
+          accessibilityLabel="Restore purchases"
+          accessibilityHint="Restores an existing subscription"
+        >
           <Text style={styles.restoreButtonText}>Restore Purchases</Text>
         </TouchableOpacity>
         <Text style={styles.legalText}>

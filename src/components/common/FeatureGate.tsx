@@ -119,6 +119,9 @@ function DefaultLockedView({ feature }: DefaultLockedViewProps) {
       <TouchableOpacity
         style={styles.upgradeButton}
         onPress={() => router.push('/paywall' as Href)}
+        accessibilityRole="button"
+        accessibilityLabel="View plans"
+        accessibilityHint="Opens subscription plans"
       >
         <Text style={styles.upgradeButtonText}>View Plans</Text>
       </TouchableOpacity>
