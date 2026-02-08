@@ -43,7 +43,9 @@ export default function ForgotPasswordScreen() {
           </View>
 
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Reset Password</Text>
+            <Text style={styles.formTitle} accessibilityRole="header">
+              Reset Password
+            </Text>
 
             {sent ? (
               <View style={styles.successBanner}>
@@ -55,8 +57,8 @@ export default function ForgotPasswordScreen() {
             ) : (
               <>
                 <Text style={styles.description}>
-                  Enter the email address associated with your account and we'll
-                  send you a link to reset your password.
+                  Enter the email address associated with your account and we'll send you a link to
+                  reset your password.
                 </Text>
 
                 {error && (
@@ -98,7 +100,12 @@ export default function ForgotPasswordScreen() {
           </View>
 
           <View style={styles.footer}>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Back to log in"
+              accessibilityHint="Returns to the login screen"
+            >
               <Text style={styles.footerLink}>Back to Log In</Text>
             </TouchableOpacity>
           </View>

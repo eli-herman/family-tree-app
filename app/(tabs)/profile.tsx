@@ -22,7 +22,9 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          Profile
+        </Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -69,7 +71,12 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.logoutSection}>
-          <TouchableOpacity onPress={handleLogout}>
+          <TouchableOpacity
+            onPress={handleLogout}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+            accessibilityHint="Signs you out of the app"
+          >
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
         </View>
@@ -91,6 +98,10 @@ function SettingsItem({
     <TouchableOpacity
       style={[styles.settingsItem, !isLast && styles.settingsItemBorder]}
       onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !onPress }}
     >
       <Text style={styles.settingsLabel}>{label}</Text>
       <Text style={styles.settingsChevron}>›</Text>

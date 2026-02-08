@@ -5,6 +5,54 @@
 
 ---
 
+## 2026-02-07 - Accessibility Pass + Tree Label Cleanup
+
+### Changes
+
+- Added accessibility labels/roles/hints to touchables across auth, profile, paywall, tree, and member screens
+- Removed relationship text labels under tree node names (layout still uses relationships)
+
+### Files Affected
+
+- `app/(auth)/login.tsx`
+- `app/(auth)/signup.tsx`
+- `app/(auth)/forgot-password.tsx`
+- `app/(tabs)/profile.tsx`
+- `app/(tabs)/tree.tsx`
+- `app/member/[id].tsx`
+- `app/paywall.tsx`
+- `src/components/common/Button.tsx`
+- `src/components/common/FeatureGate.tsx`
+- `src/components/common/UpgradeBanner.tsx`
+- `src/components/feed/FeedItem.tsx`
+- `src/components/feed/PromptCard.tsx`
+- `src/components/tree/TreeNode.tsx`
+- `.claude/agents/status-board.md`
+- `HANDOFF.md`
+
+### For Other Agents
+
+- Run a quick VoiceOver/TalkBack pass to confirm labels read cleanly.
+
+## 2026-02-07 - App Error Boundary
+
+### Changes
+
+- Added a global `ErrorBoundary` component with a safe fallback UI + retry button
+- Wrapped the app root layout with the boundary
+
+### Files Affected
+
+- `src/components/common/ErrorBoundary.tsx`
+- `src/components/common/index.ts`
+- `app/_layout.tsx`
+- `.claude/agents/status-board.md`
+- `HANDOFF.md`
+
+### For Other Agents
+
+- If you want per-tab isolation, add route-level boundaries later; this is app-wide for now.
+
 ## 2026-02-07 - README Badges + Banner Removal
 
 ### Changes

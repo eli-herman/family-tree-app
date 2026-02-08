@@ -13,7 +13,12 @@ export function PromptCard({ prompt, onRespond }: PromptCardProps) {
     <View style={styles.container}>
       <Text style={styles.icon}>🌿</Text>
       <Text style={styles.promptText}>"{prompt.text}"</Text>
-      <TouchableOpacity onPress={() => onRespond(prompt)}>
+      <TouchableOpacity
+        onPress={() => onRespond(prompt)}
+        accessibilityRole="button"
+        accessibilityLabel="Share a memory"
+        accessibilityHint="Opens the response flow for this prompt"
+      >
         <Text style={styles.button}>Share a memory →</Text>
       </TouchableOpacity>
     </View>

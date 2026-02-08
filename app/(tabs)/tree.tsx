@@ -448,7 +448,9 @@ export default function TreeScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <Text style={styles.title}>Family Tree</Text>
+          <Text style={styles.title} accessibilityRole="header">
+            Family Tree
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -458,7 +460,9 @@ export default function TreeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Image source={require('../../assets/app_logo_icon.png')} style={styles.logo} />
-        <Text style={styles.title}>Family Tree</Text>
+        <Text style={styles.title} accessibilityRole="header">
+          Family Tree
+        </Text>
       </View>
 
       <GestureDetector gesture={composed}>

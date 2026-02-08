@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { useAuthStore, useFamilyStore, useUserStore, useFeedStore } from '../src/stores';
 import { colors } from '../src/constants';
+import { ErrorBoundary } from '../src/components/common';
 
 function LoadingScreen() {
   return (
@@ -64,13 +65,15 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
-        <AuthGate>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="member/[id]" options={{ presentation: 'modal' }} />
-          </Stack>
-        </AuthGate>
+        <ErrorBoundary>
+          <AuthGate>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="member/[id]" options={{ presentation: 'modal' }} />
+            </Stack>
+          </AuthGate>
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

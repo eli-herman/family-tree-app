@@ -18,6 +18,8 @@ interface ButtonProps {
   loading?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export function Button({
@@ -29,6 +31,8 @@ export function Button({
   loading = false,
   style,
   textStyle,
+  accessibilityLabel,
+  accessibilityHint,
 }: ButtonProps) {
   const buttonStyles = [
     styles.base,
@@ -52,6 +56,10 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator

@@ -1,15 +1,15 @@
 ---
 device: Mac.lan
 branch: main
-commit: 5039aca
-timestamp: '2026-02-07T08:27:10Z'
+commit: 862be8c
+timestamp: '2026-02-07T20:33:52Z'
 ---
 
 # Session Handoff
 
 ## Summary
 
-Last commit: `5039aca` on `main`
+Last commit: `862be8c` on `main`
 
 > chore: update HANDOFF.md [31624c0]
 
@@ -32,6 +32,9 @@ Last commit: `5039aca` on `main`
 - Ran `npm audit fix` and cleared the high-severity vulnerability.
 - Reset Watchman watch to remove recrawl warnings.
 - Updated README with CI + secret scanning badges; removed ASCII banner.
+- Added app-level ErrorBoundary with safe fallback UI and retry action.
+- Added accessibility labels/roles to interactive controls across the app.
+- Removed relationship labels (Parent/Grandparent/Sibling) from tree nodes; kept relationships for layout only.
 - Added Dependabot config for npm + GitHub Actions updates.
 - Added README note for enabling GitHub secret scanning.
 
@@ -40,6 +43,10 @@ Last commit: `5039aca` on `main`
 - app/(tabs)/tree.tsx
 - app/(tabs)/\_layout.tsx
 - app/(tabs)/profile.tsx
+- app/\_layout.tsx
+- app/(auth)/login.tsx
+- app/(auth)/signup.tsx
+- app/(auth)/forgot-password.tsx
 - app/member/[id].tsx
 - app/paywall.tsx
 - src/stores/familyStore.ts
@@ -49,9 +56,15 @@ Last commit: `5039aca` on `main`
 - src/utils/relationships.ts
 - src/utils/**tests**/relationships.test.ts
 - src/components/common/Avatar.tsx
+- src/components/common/ErrorBoundary.tsx
+- src/components/common/index.ts
+- src/components/common/Button.tsx
+- src/components/common/FeatureGate.tsx
+- src/components/common/UpgradeBanner.tsx
 - src/components/feed/FeedItem.tsx
 - src/components/feed/PromptCard.tsx
 - src/components/profile/ProfileHeader.tsx
+- src/components/tree/TreeNode.tsx
 - HANDOFF.md
 - .claude/agents/status-board.md
 - .claude/agents/updates-log.md
@@ -103,3 +116,4 @@ Last commit: `5039aca` on `main`
 1. Add spouse + parent + child + sibling on device; confirm layout/connector stability.
 2. If desired, add an explicit “Add Member” entry point on the tree header.
 3. Decide if/when to allow sequential partners (divorced/widowed history).
+4. Run a quick VoiceOver/TalkBack pass to confirm labels read well.

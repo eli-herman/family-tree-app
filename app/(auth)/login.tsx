@@ -37,13 +37,13 @@ export default function LoginScreen() {
         >
           <View style={styles.brandingSection}>
             <Text style={styles.appName}>The Vine</Text>
-            <Text style={styles.verse}>
-              "I am the vine; you are the branches" — John 15:5
-            </Text>
+            <Text style={styles.verse}>"I am the vine; you are the branches" — John 15:5</Text>
           </View>
 
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Welcome Back</Text>
+            <Text style={styles.formTitle} accessibilityRole="header">
+              Welcome Back
+            </Text>
 
             {error && (
               <View style={styles.errorBanner}>
@@ -92,6 +92,9 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={styles.forgotLink}
               onPress={() => router.push('/(auth)/forgot-password' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="Forgot password"
+              accessibilityHint="Opens password reset screen"
             >
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
@@ -108,7 +111,12 @@ export default function LoginScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/signup' as Href)}>
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/signup' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="Sign up"
+              accessibilityHint="Opens the create account screen"
+            >
               <Text style={styles.footerLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>
