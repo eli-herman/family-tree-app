@@ -15,6 +15,72 @@ _No active tasks_
 
 <!-- Move completed tasks here -->
 
+### Family Management Entry Point + Edit
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** Remove member modal add section; add Manage Family button on tree; add manage + edit modals
+- **Files:** app/(tabs)/tree.tsx, app/member/[id].tsx, src/stores/familyStore.ts, src/types/user.ts
+- **Started:** 2026-02-09T19:05:00Z
+- **Completed:** 2026-02-09T19:26:06Z
+- **Blockers:** None
+- **Notes:** Manage button opens modal with add actions + edit; auto-opens from tree via manage param.
+
+### Relationship Wizard Planning
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** Guided add-member flow for extended relatives (uncle/cousin/grandparent)
+- **Files:** src/stores/familyStore.ts, app/member/[id].tsx, src/types/user.ts
+- **Started:** 2026-02-08T02:45:00Z
+- **Completed:** 2026-02-09T19:26:06Z
+- **Blockers:** None
+- **Notes:** Added addRelative mapping + 3-step relative wizard with anchor validation.
+
+### Paywall Close Button Padding
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** Reduce top padding above paywall close button
+- **Files:** app/paywall.tsx
+- **Started:** 2026-02-09T18:46:58Z
+- **Completed:** 2026-02-09T18:47:13Z
+- **Blockers:** None
+- **Notes:** Reduced header top padding and close button spacing.
+
+### Paywall Close Button Spacing
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** Improve close button spacing from paywall header text
+- **Files:** app/paywall.tsx
+- **Started:** 2026-02-09T18:45:16Z
+- **Completed:** 2026-02-09T18:45:33Z
+- **Blockers:** None
+- **Notes:** Moved close button into flow with spacing so it no longer crowds the header text.
+
+### Paywall Recommended Border Fix
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** Remove recommended border highlight when tier is not selected
+- **Files:** app/paywall.tsx
+- **Started:** 2026-02-09T18:42:18Z
+- **Completed:** 2026-02-09T18:42:39Z
+- **Blockers:** None
+- **Notes:** Recommended badge remains; border now only indicates selection.
+
+### Paywall Polish (Phase 2)
+
+- **Agent:** Codex
+- **Status:** Done
+- **Working On:** Paywall spacing, touch targets, safe area padding, and tier card layout polish (PAY-01 to PAY-03)
+- **Files:** app/paywall.tsx, src/components/common/UpgradeBanner.tsx
+- **Started:** 2026-02-09T17:13:18Z
+- **Completed:** 2026-02-09T17:14:39Z
+- **Blockers:** None
+- **Notes:** Switched to safe-area-context insets, fixed badge overlap, and enforced 44pt touch targets.
+
 ### Tree Focus Anchor After Add
 
 - **Agent:** Codex

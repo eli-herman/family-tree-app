@@ -15,6 +15,7 @@ import {
   FamilyUnitRecord,
   FamilyUnitChildLink,
   NewMemberInput,
+  ExtendedRelativeType,
   ParentRelationshipType,
 } from '../types';
 import { mockFamilyMembers } from '../utils/mockData';
@@ -316,6 +317,13 @@ interface FamilyState {
   addChild: (parentId: string, input: NewMemberInput) => Promise<string>;
   addSibling: (memberId: string, input: NewMemberInput) => Promise<string>;
   addParent: (memberId: string, input: NewMemberInput) => Promise<string>;
+  addRelative: (params: {
+    relation: ExtendedRelativeType;
+    parentId?: string;
+    auntUncleId?: string;
+    input: NewMemberInput;
+  }) => Promise<string>;
+  updateMember: (memberId: string, updates: Partial<NewMemberInput>) => Promise<void>;
 
   // Selectors
   getMemberById: (id: string) => FamilyMember | undefined;
@@ -691,6 +699,68 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
     set({ members: nextMembers, units: nextUnits });
 
     return newMember.id;
+  },
+
+  addRelative: async ({ relation, parentId, auntUncleId, input }) => {
+    const { addParent, addSibling, addChild } = get();
+
+    if (relation === 'grandparent') {
+      if (!parentId) {
+        throw new Error('Select a parent before adding a grandparent.');
+      }
+      return addParent(parentId, input);
+    }
+
+    if (relation === 'aunt-uncle') {
+      if (!parentId) {
+        throw new Error('Select a parent before adding an aunt or uncle.');
+      }
+      return addSibling(parentId, input);
+    }
+
+    if (relation === 'cousin') {
+      if (!auntUncleId) {
+        throw new Error('Select an aunt or uncle before adding a cousin.');
+      }
+      return addChild(auntUncleId, input);
+    }
+
+    throw new Error('Unsupported relative type.');
+  },
+
+  updateMember: async (memberId, updates) => {
+    const { members, units, familyId } = get();
+    const member = members.find((existing) => existing.id === memberId);
+    if (!member) {
+      throw new Error('Member not found.');
+    }
+
+    const now = new Date();
+    const nextMember: FamilyMember = {
+      ...member,
+      firstName: updates.firstName ?? member.firstName,
+      lastName: updates.lastName ?? member.lastName,
+      nickname: updates.nickname ?? member.nickname,
+      photoURL: updates.photoURL ?? member.photoURL,
+      birthDate: updates.birthDate ?? member.birthDate,
+      deathDate: updates.deathDate ?? member.deathDate,
+      bio: updates.bio ?? member.bio,
+      gender: updates.gender ?? member.gender,
+      updatedAt: now,
+    };
+
+    await ensureFamilyDoc(familyId);
+    await setDoc(
+      doc(collection(db, 'families', familyId, 'members'), memberId),
+      toMemberDoc(nextMember),
+      { merge: true },
+    );
+
+    const nextMembers = applyUnitsToMembers(
+      members.map((existing) => (existing.id === memberId ? nextMember : existing)),
+      units,
+    );
+    set({ members: nextMembers });
   },
 
   getMemberById: (id) => {

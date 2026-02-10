@@ -44,6 +44,8 @@ export interface Relationship {
 
 export type ParentRelationshipType = 'biological' | 'adopted' | 'step' | 'guardian';
 
+export type ExtendedRelativeType = 'grandparent' | 'aunt-uncle' | 'cousin';
+
 export type RelationshipType =
   | 'parent'
   | 'child'

@@ -1,14 +1,25 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { View, StyleSheet, Text, Image, ActivityIndicator, LayoutChangeEvent } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Text,
+  Image,
+  ActivityIndicator,
+  LayoutChangeEvent,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { TreeNode, TREE_NODE_HEIGHT, TREE_NODE_WIDTH } from '../../src/components/tree';
-import { colors, spacing } from '../../src/constants';
+import { Avatar } from '../../src/components/common';
+import { borderRadius, colors, spacing } from '../../src/constants';
 import { FamilyMember, FamilyUnit, isFamilyUnit } from '../../src/types';
-import { useFamilyStore, useUserStore } from '../../src/stores';
+import { useFamilyStore } from '../../src/stores';
 
 const SPOUSE_GAP = spacing['2xl']; // 48px between ancestor branches
 const COUPLE_GAP = spacing.md; // 16px between spouses within a couple
@@ -242,11 +253,11 @@ const buildTreeLayout = (
 
 export default function TreeScreen() {
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
+  const [isManageListOpen, setIsManageListOpen] = useState(false);
   const router = useRouter();
   const isLoading = useFamilyStore((state) => state.isLoading);
   const buildFamilyTree = useFamilyStore((state) => state.buildFamilyTree);
   const members = useFamilyStore((state) => state.members);
-  const setCurrentMemberId = useUserStore((state) => state.setCurrentMemberId);
 
   // Gesture shared values
   const scale = useSharedValue(1);
@@ -324,10 +335,32 @@ export default function TreeScreen() {
   }));
 
   const handleMemberPress = (member: FamilyMember) => {
-    setCurrentMemberId(member.id);
     setSelectedMember(member);
     router.push(`/member/${member.id}`);
   };
+
+  const handleManageFamily = () => {
+    if (!members.length) return;
+    setIsManageListOpen(true);
+  };
+
+  const closeManageList = () => {
+    setIsManageListOpen(false);
+  };
+
+  const handleManageSelect = (member: FamilyMember) => {
+    setIsManageListOpen(false);
+    setSelectedMember(member);
+    router.push({ pathname: '/member/[id]', params: { id: member.id, manage: '1' } });
+  };
+
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      const last = a.lastName.localeCompare(b.lastName);
+      if (last !== 0) return last;
+      return a.firstName.localeCompare(b.firstName);
+    });
+  }, [members]);
 
   const connectors = useMemo(() => {
     if (!centerUnit) {
@@ -466,6 +499,69 @@ export default function TreeScreen() {
           Family Tree
         </Text>
       </View>
+      <View style={styles.actionBar}>
+        <TouchableOpacity
+          style={[styles.manageButton, !members.length && styles.manageButtonDisabled]}
+          onPress={handleManageFamily}
+          disabled={!members.length}
+          accessibilityRole="button"
+          accessibilityLabel="Manage family"
+          accessibilityHint="Opens the add or edit family member flow"
+        >
+          <Text style={styles.manageButtonText}>Manage Family</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isManageListOpen}
+        onRequestClose={closeManageList}
+      >
+        <View style={styles.manageOverlay}>
+          <View style={styles.manageCard}>
+            <View style={styles.manageHeaderRow}>
+              <Text style={styles.manageTitle} accessibilityRole="header">
+                Manage Family
+              </Text>
+              <TouchableOpacity
+                onPress={closeManageList}
+                accessibilityRole="button"
+                accessibilityLabel="Close manage family list"
+              >
+                <Text style={styles.manageCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.manageSubtitle}>
+              Choose a family member to add relatives or edit details.
+            </Text>
+
+            <ScrollView contentContainerStyle={styles.manageList}>
+              {sortedMembers.map((member) => {
+                const displayName = member.nickname || `${member.firstName} ${member.lastName}`;
+                const secondaryName = member.nickname && `${member.firstName} ${member.lastName}`;
+                return (
+                  <TouchableOpacity
+                    key={member.id}
+                    style={styles.manageRow}
+                    onPress={() => handleManageSelect(member)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Manage ${displayName}`}
+                  >
+                    <Avatar name={member.firstName} size="sm" variant="green" />
+                    <View style={styles.manageRowInfo}>
+                      <Text style={styles.manageRowName}>{displayName}</Text>
+                      {secondaryName ? (
+                        <Text style={styles.manageRowMeta}>{secondaryName}</Text>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <GestureDetector gesture={composed}>
         <View style={styles.panArea} onLayout={handleViewportLayout}>
@@ -578,6 +674,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
   },
+  actionBar: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  manageButton: {
+    backgroundColor: colors.primary.main,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+  },
+  manageButtonText: {
+    color: colors.text.inverse,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  manageButtonDisabled: {
+    backgroundColor: colors.background.tertiary,
+  },
   logo: {
     width: 32,
     height: 32,
@@ -607,5 +723,66 @@ const styles = StyleSheet.create({
   loader: {
     flex: 1,
     justifyContent: 'center',
+  },
+  manageOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  manageCard: {
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    maxHeight: '80%',
+  },
+  manageHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  manageTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  manageCloseText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary.main,
+  },
+  manageSubtitle: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+  },
+  manageList: {
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  manageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.sm,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.background.tertiary,
+  },
+  manageRowInfo: {
+    marginLeft: spacing.sm,
+  },
+  manageRowName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text.primary,
+  },
+  manageRowMeta: {
+    fontSize: 12,
+    color: colors.text.tertiary,
+    marginTop: 2,
   },
 });

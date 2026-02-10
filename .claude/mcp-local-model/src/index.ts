@@ -1,41 +1,39 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
-import { extractTool, extractHandler } from "./tools/extract.js";
-import { verifyTool, verifyHandler } from "./tools/verify.js";
-import { generateTool, generateHandler } from "./tools/generate.js";
-import { gitTool, gitHandler } from "./tools/git.js";
-import { analyzeTool, analyzeHandler } from "./tools/analyze.js";
-import { metricsTool, metricsHandler } from "./tools/metrics.js";
-import { searchTool, searchHandler } from "./tools/search.js";
+import { extractTool, extractHandler } from './tools/extract.js';
+import { verifyTool, verifyHandler } from './tools/verify.js';
+import { generateTool, generateHandler } from './tools/generate.js';
+import { gitTool, gitHandler } from './tools/git.js';
+import { analyzeTool, analyzeHandler } from './tools/analyze.js';
+import { metricsTool, metricsHandler } from './tools/metrics.js';
+import { searchTool, searchHandler } from './tools/search.js';
 import {
   reviewApproachTool,
   reviewApproachHandler,
   reviewCodeTool,
   reviewCodeHandler,
-} from "./tools/review.js";
-import { handoffTool, handoffHandler } from "./tools/handoff.js";
-import { commitMsgTool, commitMsgHandler } from "./tools/commit-msg.js";
-import { docCheckTool, docCheckHandler } from "./tools/doc-check.js";
-import { connectivityTool, connectivityHandler } from "./tools/connectivity.js";
-import { indexFilesTool, indexFilesHandler } from "./tools/index-files.js";
-import { config, validateConfig } from "./config.js";
-import { events } from "./events.js";
+} from './tools/review.js';
+import { handoffTool, handoffHandler } from './tools/handoff.js';
+import { commitMsgTool, commitMsgHandler } from './tools/commit-msg.js';
+import { docCheckTool, docCheckHandler } from './tools/doc-check.js';
+import { connectivityTool, connectivityHandler } from './tools/connectivity.js';
+import { indexFilesTool, indexFilesHandler } from './tools/index-files.js';
+import { summarizeTool, summarizeHandler } from './tools/summarize.js';
+import { config, validateConfig } from './config.js';
+import { events } from './events.js';
 
 const server = new Server(
   {
-    name: "local-model",
-    version: "1.0.0",
+    name: 'local-model',
+    version: '1.0.0',
   },
   {
     capabilities: {
       tools: {},
     },
-  }
+  },
 );
 
 // Register all tools
@@ -54,6 +52,7 @@ const tools = [
   docCheckTool,
   connectivityTool,
   indexFilesTool,
+  summarizeTool,
 ];
 
 const handlers: Record<string, (params: any) => Promise<any>> = {
@@ -71,6 +70,7 @@ const handlers: Record<string, (params: any) => Promise<any>> = {
   local_doc_check: docCheckHandler,
   local_connectivity: connectivityHandler,
   local_index: indexFilesHandler,
+  local_summarize: summarizeHandler,
 };
 
 // List available tools
@@ -87,13 +87,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: JSON.stringify({
             success: false,
             error: `Unknown tool: ${name}`,
-            error_category: "invalid_tool",
+            error_category: 'invalid_tool',
             recoverable: false,
-            suggestion: "Check available tools with list_tools",
+            suggestion: 'Check available tools with list_tools',
           }),
         },
       ],
@@ -105,7 +105,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: JSON.stringify(result),
         },
       ],
@@ -114,13 +114,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     return {
       content: [
         {
-          type: "text",
+          type: 'text',
           text: JSON.stringify({
             success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-            error_category: "execution_error",
+            error: error instanceof Error ? error.message : 'Unknown error',
+            error_category: 'execution_error',
             recoverable: true,
-            suggestion: "Retry or handle directly",
+            suggestion: 'Retry or handle directly',
           }),
         },
       ],
@@ -150,8 +150,12 @@ async function main() {
   console.error(`Local Model MCP Server running (${tools.length} tools)`);
   console.error(`  Local model: ${config.ollama.model}`);
   console.error(`  Remote server: ${config.remote?.host || 'not configured'}`);
-  console.error(`  Dashboard WebSocket: ${config.dashboard?.enabled ? `ws://localhost:${config.dashboard.wsPort}` : 'disabled'}`);
-  console.error(`  Cache: ${config.cache.enabled ? 'enabled' : 'disabled'} (files: ${config.cache.fileMaxSize}, ollama: ${config.cache.ollamaMaxSize})`);
+  console.error(
+    `  Dashboard WebSocket: ${config.dashboard?.enabled ? `ws://localhost:${config.dashboard.wsPort}` : 'disabled'}`,
+  );
+  console.error(
+    `  Cache: ${config.cache.enabled ? 'enabled' : 'disabled'} (files: ${config.cache.fileMaxSize}, ollama: ${config.cache.ollamaMaxSize})`,
+  );
 }
 
 main().catch(console.error);

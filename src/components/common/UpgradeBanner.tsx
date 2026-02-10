@@ -104,9 +104,11 @@ const styles = StyleSheet.create({
   },
   upgradeButton: {
     backgroundColor: colors.primary.main,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    minHeight: 44,
     borderRadius: borderRadius.md,
+    justifyContent: 'center',
   },
   upgradeButtonText: {
     ...typography.textStyles.caption,
@@ -114,8 +116,10 @@ const styles = StyleSheet.create({
     color: colors.text.inverse,
   },
   dismissButton: {
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   dismissButtonText: {
     ...typography.textStyles.caption,

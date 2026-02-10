@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../src/constants/colors';
 import { typography } from '../src/constants/typography';
 import { spacing, borderRadius } from '../src/constants/spacing';
@@ -31,11 +32,7 @@ function TierCard({
 }: TierCardProps) {
   return (
     <TouchableOpacity
-      style={[
-        styles.tierCard,
-        isSelected && styles.tierCardSelected,
-        isRecommended && styles.tierCardRecommended,
-      ]}
+      style={[styles.tierCard, isSelected && styles.tierCardSelected]}
       onPress={onSelect}
       activeOpacity={0.8}
       accessibilityRole="button"
@@ -48,15 +45,17 @@ function TierCard({
           <Text style={styles.recommendedText}>Recommended</Text>
         </View>
       )}
-      {savings && (
-        <View style={styles.savingsBadge}>
-          <Text style={styles.savingsText}>{savings}</Text>
-        </View>
-      )}
       <Text style={styles.tierName}>{name}</Text>
       <View style={styles.priceRow}>
-        <Text style={styles.tierPrice}>{price}</Text>
-        <Text style={styles.tierPeriod}>/{period}</Text>
+        <View style={styles.priceRowLeft}>
+          <Text style={styles.tierPrice}>{price}</Text>
+          <Text style={styles.tierPeriod}>/{period}</Text>
+        </View>
+        {savings && (
+          <View style={styles.savingsBadge}>
+            <Text style={styles.savingsText}>{savings}</Text>
+          </View>
+        )}
       </View>
       <View style={styles.featuresContainer}>
         {features.map((feature, index) => (
@@ -76,6 +75,8 @@ function TierCard({
 export default function PaywallScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<PlanPeriod>('yearly');
   const [selectedTier, setSelectedTier] = useState<'family' | 'legacy'>('family');
+  const [footerHeight, setFooterHeight] = useState(0);
+  const insets = useSafeAreaInsets();
 
   const familyProduct = PRODUCTS.find((p) => p.tier === 'family' && p.period === selectedPeriod);
   const legacyProduct = PRODUCTS.find((p) => p.tier === 'legacy' && p.period === selectedPeriod);
@@ -108,8 +109,10 @@ export default function PaywallScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xl + footerHeight }]}
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -209,7 +212,15 @@ export default function PaywallScreen() {
       </ScrollView>
 
       {/* Subscribe button */}
-      <View style={styles.footer}>
+      <View
+        style={[styles.footer, { paddingBottom: spacing.md + insets.bottom }]}
+        onLayout={(event) => {
+          const height = event.nativeEvent.layout.height;
+          if (height !== footerHeight) {
+            setFooterHeight(height);
+          }
+        }}
+      >
         <TouchableOpacity
           style={styles.subscribeButton}
           onPress={handleSubscribe}
@@ -244,6 +255,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
   },
   scrollContent: {
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
   },
   header: {
@@ -253,15 +265,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButton: {
-    position: 'absolute',
-    top: spacing.md,
-    left: spacing.md,
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: borderRadius.full,
     backgroundColor: colors.background.tertiary,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-start',
+    marginBottom: spacing.xs,
   },
   closeText: {
     fontSize: 24,
@@ -272,7 +283,7 @@ const styles = StyleSheet.create({
     ...typography.textStyles.h2,
     color: colors.primary.dark,
     textAlign: 'center',
-    marginTop: spacing.xl,
+    marginTop: 0,
   },
   subtitle: {
     ...typography.textStyles.body,
@@ -312,8 +323,10 @@ const styles = StyleSheet.create({
   periodButton: {
     flex: 1,
     paddingVertical: spacing.sm,
+    minHeight: 44,
     borderRadius: borderRadius.md,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   periodButtonActive: {
     backgroundColor: colors.background.primary,
@@ -328,10 +341,11 @@ const styles = StyleSheet.create({
   periodSavings: {
     ...typography.textStyles.caption,
     color: colors.primary.main,
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   tiersContainer: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     gap: spacing.md,
   },
   tierCard: {
@@ -343,9 +357,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tierCardSelected: {
-    borderColor: colors.primary.main,
-  },
-  tierCardRecommended: {
     borderColor: colors.primary.main,
   },
   recommendedBadge: {
@@ -363,9 +374,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   savingsBadge: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
     backgroundColor: colors.primary.light,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
@@ -383,8 +391,15 @@ const styles = StyleSheet.create({
   },
   priceRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
     marginBottom: spacing.md,
+  },
+  priceRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.xs,
   },
   tierPrice: {
     ...typography.textStyles.h2,
@@ -460,8 +475,10 @@ const styles = StyleSheet.create({
   subscribeButton: {
     backgroundColor: colors.primary.main,
     paddingVertical: spacing.md,
+    minHeight: 44,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   subscribeButtonText: {
     ...typography.textStyles.button,
@@ -469,8 +486,10 @@ const styles = StyleSheet.create({
   },
   restoreButton: {
     paddingVertical: spacing.sm,
+    minHeight: 44,
     alignItems: 'center',
     marginTop: spacing.sm,
+    justifyContent: 'center',
   },
   restoreButtonText: {
     ...typography.textStyles.bodySmall,

@@ -5,6 +5,77 @@
 
 ---
 
+## 2026-02-09 - Family Management Entry Point + Relationship Wizard
+
+### What Changed
+
+- Added a Manage Family entry on the tree screen and centralized add/edit flows in a manage modal.
+- Implemented an extended relative wizard (grandparent, aunt/uncle, cousin) with anchor validation.
+- Added member edit flow and store update action.
+
+### Files Updated
+
+- `app/(tabs)/tree.tsx`
+- `app/member/[id].tsx`
+- `src/stores/familyStore.ts`
+- `src/types/user.ts`
+
+## 2026-02-09 - Paywall Close Button Padding
+
+### What Changed
+
+- Reduced top spacing above the paywall close button by tightening header padding.
+
+### Files Updated
+
+- `app/paywall.tsx`
+
+## 2026-02-09 - Paywall Close Button Spacing
+
+### What Changed
+
+- Adjusted paywall header layout so the close button no longer crowds the title.
+
+### Files Updated
+
+- `app/paywall.tsx`
+
+## 2026-02-09 - Paywall Recommended Border Fix
+
+### What Changed
+
+- Removed the recommended border highlight so only the selected plan uses the green border.
+
+### Files Updated
+
+- `app/paywall.tsx`
+
+## 2026-02-09 - Paywall Polish (Phase 2)
+
+### What Changed
+
+- Updated paywall layout to use safe-area-context insets, with footer padding that respects device safe areas and scroll content that clears the sticky footer.
+- Enforced 44pt minimum touch targets for paywall controls and upgrade banner actions.
+- Moved savings badge into flow to avoid overlap with the selection indicator and added tier container spacing.
+
+### Files Updated
+
+- `app/paywall.tsx`
+- `src/components/common/UpgradeBanner.tsx`
+
+## 2026-02-08 - Relationship Wizard Plan
+
+### What Changed
+
+- Began planning a guided add-member wizard for extended relatives
+- Noted GitHub Education Benefits membership and recorded Student Pack tools for the project
+
+### Files Updated
+
+- `HANDOFF.md`
+- `.claude/agents/status-board.md`
+- `.claude/agents/updates-log.md`
+
 ## 2026-02-08 - Tree Focus Anchor After Add
 
 ### What Changed

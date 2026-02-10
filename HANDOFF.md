@@ -1,15 +1,15 @@
 ---
 device: Mac.lan
-branch: main
-commit: 862be8c
-timestamp: '2026-02-08T02:31:50Z'
+branch: fix/tree-focus-anchor
+commit: fa3deb3
+timestamp: '2026-02-08T02:48:57Z'
 ---
 
 # Session Handoff
 
 ## Summary
 
-Last commit: `862be8c` on `main`
+Last commit: `fa3deb3` on `fix/tree-focus-anchor`
 
 > chore: update HANDOFF.md [31624c0]
 
@@ -36,6 +36,9 @@ Last commit: `862be8c` on `main`
 - Added accessibility labels/roles to interactive controls across the app.
 - Removed relationship labels (Parent/Grandparent/Sibling) from tree nodes; kept relationships for layout only.
 - Tree now re-centers focus on the tapped member; add-sibling anchors to a parent so new siblings appear in the tree.
+- Open PR: `fix/tree-focus-anchor` → `main` (merge after CI passes).
+- Planning next: Relationship wizard to add extended relatives (uncle/cousin/grandparent) via guided questions.
+- User is enrolled in the GitHub Education Benefits program.
 - Added Dependabot config for npm + GitHub Actions updates.
 - Added README note for enabling GitHub secret scanning.
 
@@ -95,8 +98,9 @@ Last commit: `862be8c` on `main`
 
 ## Active Tasks
 
-- Verify add-member flow on device (spouse + parent + child + sibling) and confirm connectors remain stable.
-- If tree shows only a small subset, clear `families/demo-family/*` so dev seed re-runs.
+- Merge PR `fix/tree-focus-anchor` after CI.
+- Define relationship wizard flow + mapping rules for extended relatives.
+- Verify add-member flow on device (spouse + parent + child + sibling + uncle/cousin) and confirm connectors remain stable.
 
 ## Blockers
 
@@ -112,9 +116,35 @@ Last commit: `862be8c` on `main`
 - `npm install` reported deprecated packages; consider dependency refresh later.
 - Secret scanning must be enabled in GitHub settings (Repository Settings → Security & analysis).
 
+## Relationship Wizard Plan (Most Recent)
+
+1. **Question flow (simple UX)**: Who is this related to? → relationship type → clarifying parent/relative only when needed → basic details → review.
+2. **Mapping engine**: add `addRelative()` to translate high-level relations into base ops (addParent/addChild/addSibling/addSpouse).
+3. **Auto-focus**: after save, center tree on the correct anchor unit so the new member is visible immediately.
+4. **Validation**: explain missing anchors and offer to add them first.
+5. **Verification**: test parent/child/sibling + uncle/cousin/grandparent flows; confirm connectors and focus.
+
+## Student Pack Tools (Recommended)
+
+**Use now**
+
+- Sentry (crash + error tracking)
+- Doppler (secrets management)
+- 1Password (shared credentials)
+- BrowserStack (real device testing)
+- GitHub Pages (project landing page)
+
+**Next stage**
+
+- New Relic (performance/observability)
+- GitHub Codespaces (reproducible dev env)
+- Namecheap (domain + SSL)
+- Heroku (simple backend services)
+
 ## Next Steps
 
-1. Add spouse + parent + child + sibling on device; confirm layout/connector stability.
-2. If desired, add an explicit “Add Member” entry point on the tree header.
-3. Decide if/when to allow sequential partners (divorced/widowed history).
-4. Run a quick VoiceOver/TalkBack pass to confirm labels read well.
+1. Merge PR `fix/tree-focus-anchor`.
+2. Implement relationship wizard (guided questions → base relations).
+3. Add explicit “Add Member” entry point on the tree header (if desired).
+4. Decide if/when to allow sequential partners (divorced/widowed history).
+5. Run a quick VoiceOver/TalkBack pass to confirm labels read well.
