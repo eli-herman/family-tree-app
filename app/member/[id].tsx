@@ -1,84 +1,215 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Avatar, Button } from '../../src/components/common';
-import { colors, spacing, borderRadius } from '../../src/constants';
-import { useFamilyStore } from '../../src/stores';
-import {
-  NewMemberInput,
-  ParentRelationshipType,
-  ExtendedRelativeType,
-  FamilyMember,
-} from '../../src/types';
-import { getSiblings } from '../../src/utils/relationships';
+/**
+ * Member Detail Screen — `/member/[id]`
+ *
+ * This is a dynamic route screen in Expo Router. The `[id]` segment means the
+ * URL will contain a family member's unique ID (e.g. `/member/abc123`).
+ *
+ * The screen serves multiple purposes all related to a single family member:
+ *   1. **Profile View** — Displays the member's avatar, full name (or nickname),
+ *      bio, list of relationships, and birthday.
+ *   2. **Manage Family Modal** — A bottom-sheet style modal that lets the user
+ *      choose an action: edit details, add spouse/parent/child/sibling/relative,
+ *      or remove the member entirely.
+ *   3. **Add Member Form Modal** — A form to create a new immediate family member
+ *      (spouse, child, sibling, or parent) with fields for first name, last name,
+ *      gender, birth date, and relationship type (biological, adopted, step, guardian).
+ *   4. **Add Relative Wizard** — A 3-step wizard for adding extended relatives
+ *      (grandparent, aunt/uncle, cousin). Step 1 picks the relation type, Step 2
+ *      picks the "anchor" parent or aunt/uncle, and Step 3 collects the new
+ *      relative's details.
+ *   5. **Edit Member Modal** — A form to update an existing member's details
+ *      (name, nickname, bio, birth/death dates, gender).
+ *   6. **Remove Member Confirmation** — A centered dialog that asks the user to
+ *      confirm permanent deletion of a member and all their connections.
+ *
+ * State is managed locally with `useState` hooks and persisted through the
+ * `useFamilyStore` Zustand store, which handles the actual data mutations.
+ */
 
+import React, { useMemo, useState, useEffect } from 'react';
+// React Native core UI components used throughout this screen
+import {
+  View, // Generic container for layout (like a <div> in web)
+  ScrollView, // Scrollable container so long content doesn't get cut off
+  StyleSheet, // Creates optimized style objects for React Native
+  Text, // Renders text on screen (React Native requires this wrapper)
+  TouchableOpacity, // A button-like wrapper that dims opacity when pressed
+  TextInput, // A text field the user can type into
+  Modal, // A full-screen overlay that slides or fades in
+  KeyboardAvoidingView, // Pushes content up when the keyboard opens
+  Platform, // Detects if running on iOS or Android
+} from 'react-native';
+// SafeAreaView ensures content doesn't overlap with the notch or home indicator
+import { SafeAreaView } from 'react-native-safe-area-context';
+// Expo Router hooks: useLocalSearchParams reads URL params, useRouter navigates
+import { useLocalSearchParams, useRouter } from 'expo-router';
+// Reusable UI components from the app's component library
+import { Avatar, Button } from '../../src/components/common';
+// Design system tokens for consistent colors, spacing, and border radii
+import { colors, spacing, borderRadius } from '../../src/constants';
+// Zustand store hook that provides access to family member data and actions
+import { useFamilyStore } from '../../src/stores';
+// TypeScript type definitions for type safety
+import {
+  NewMemberInput, // Shape of data needed to create a new family member
+  ParentRelationshipType, // Union type: 'biological' | 'adopted' | 'step' | 'guardian'
+  ExtendedRelativeType, // Union type: 'grandparent' | 'aunt-uncle' | 'cousin'
+  FamilyMember, // Full family member object shape
+} from '../../src/types';
+// Utility function that finds all siblings of a given member
+import { getSiblings } from '../../src/utils/relationships';
+// date-fns helpers: parse converts a date string to a Date object, isValid checks it
+import { parse, isValid } from 'date-fns';
+
+/**
+ * AddMode — Determines which type of immediate family member is being added.
+ * This controls the title of the add-member modal and which store action
+ * is called on save (addSpouse, addChild, addSibling, or addParent).
+ */
 type AddMode = 'spouse' | 'child' | 'sibling' | 'parent';
+
+/**
+ * RelativeStep — Tracks which step the user is on in the 3-step "Add Relative"
+ * wizard. 'relation' = choose type, 'anchor' = pick parent/aunt-uncle,
+ * 'details' = enter name/gender/etc.
+ */
 type RelativeStep = 'relation' | 'anchor' | 'details';
+
+/**
+ * RELATION_OPTIONS — The four types of parent-child relationships available
+ * when adding a child, sibling, or parent. Each option is rendered as a
+ * selectable chip in the add-member form. Not shown for spouses since
+ * spousal relationships don't have a "kind" qualifier.
+ */
 const RELATION_OPTIONS: { id: ParentRelationshipType; label: string }[] = [
   { id: 'biological', label: 'Biological' },
   { id: 'adopted', label: 'Adopted' },
   { id: 'step', label: 'Step' },
   { id: 'guardian', label: 'Guardian' },
 ];
+
+/**
+ * RELATIVE_OPTIONS — The three types of extended relatives the wizard supports.
+ * Each includes a user-friendly description shown below the label to help
+ * the user understand the family relationship.
+ */
 const RELATIVE_OPTIONS: { id: ExtendedRelativeType; label: string; description: string }[] = [
   { id: 'grandparent', label: 'Grandparent', description: 'Parent of a parent' },
   { id: 'aunt-uncle', label: 'Aunt / Uncle', description: 'Sibling of a parent' },
   { id: 'cousin', label: 'Cousin', description: 'Child of an aunt or uncle' },
 ];
 
+/**
+ * parseDateText — Converts a user-typed date string into a Date object.
+ *
+ * @param text - The raw text from the date input field (e.g. "03/15/1990")
+ * @returns A valid Date object if the string matches MM/DD/YYYY format, or
+ *          null if the string is empty or doesn't match the expected format.
+ *
+ * Uses date-fns `parse` to interpret the string according to a specific format,
+ * then `isValid` to confirm the result is a real date (e.g. rejects "13/45/2000").
+ */
+const parseDateText = (text: string): Date | null => {
+  // Return null for empty or whitespace-only input
+  if (!text.trim()) return null;
+  // Attempt to parse the trimmed text as MM/dd/yyyy, using today as the reference date
+  const parsed = parse(text.trim(), 'MM/dd/yyyy', new Date());
+  // Only return the Date if it represents a valid calendar date
+  return isValid(parsed) ? parsed : null;
+};
+
+/**
+ * formatDateForInput — Converts a Date object back into a MM/DD/YYYY string
+ * suitable for pre-filling a text input field.
+ *
+ * @param date - Optional Date object to format
+ * @returns A formatted string like "03/15/1990", or an empty string if no date
+ *
+ * `getMonth()` returns 0-11, so we add 1. `padStart(2, '0')` ensures single-digit
+ * months and days get a leading zero (e.g. "3" becomes "03").
+ */
+const formatDateForInput = (date?: Date): string => {
+  // If no date is provided, return empty string for the input field
+  if (!date) return '';
+  // Build MM/DD/YYYY string with zero-padded month and day
+  return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}/${date.getFullYear()}`;
+};
+
+/**
+ * MemberDetailScreen — The main component for this route.
+ *
+ * This is the default export, which Expo Router automatically uses as the
+ * screen for the `/member/[id]` route. It reads the member ID from the URL,
+ * fetches the member data from the Zustand store, and renders the profile
+ * view along with all the modal overlays for managing the member.
+ */
 export default function MemberDetailScreen() {
+  // Extract URL parameters: `id` is the member's unique ID, `manage` is an
+  // optional flag that, when present, auto-opens the manage family modal
   const { id, manage } = useLocalSearchParams<{ id: string; manage?: string }>();
+  // Router instance for programmatic navigation (e.g. going back)
   const router = useRouter();
+  // Expo Router can return params as string or string[]; normalize to a single string
   const memberId = Array.isArray(id) ? id[0] : id;
 
-  const getMemberById = useFamilyStore((state) => state.getMemberById);
-  const members = useFamilyStore((state) => state.members);
-  const addSpouse = useFamilyStore((state) => state.addSpouse);
-  const addChild = useFamilyStore((state) => state.addChild);
-  const addSibling = useFamilyStore((state) => state.addSibling);
-  const addParent = useFamilyStore((state) => state.addParent);
-  const addRelative = useFamilyStore((state) => state.addRelative);
-  const updateMember = useFamilyStore((state) => state.updateMember);
-  const getParentsOf = useFamilyStore((state) => state.getParentsOf);
+  // --- Zustand Store Selectors ---
+  // Each selector extracts a single function or value from the store.
+  // Using individual selectors (instead of destructuring the whole store)
+  // prevents unnecessary re-renders when unrelated store values change.
+  const getMemberById = useFamilyStore((state) => state.getMemberById); // Looks up a member by ID
+  const members = useFamilyStore((state) => state.members); // The full array of all family members
+  const addSpouse = useFamilyStore((state) => state.addSpouse); // Action: adds a spouse to a member
+  const addChild = useFamilyStore((state) => state.addChild); // Action: adds a child to a member
+  const addSibling = useFamilyStore((state) => state.addSibling); // Action: adds a sibling to a member
+  const addParent = useFamilyStore((state) => state.addParent); // Action: adds a parent to a member
+  const addRelative = useFamilyStore((state) => state.addRelative); // Action: adds an extended relative
+  const updateMember = useFamilyStore((state) => state.updateMember); // Action: updates a member's details
+  const removeMember = useFamilyStore((state) => state.removeMember); // Action: permanently deletes a member
+  const getParentsOf = useFamilyStore((state) => state.getParentsOf); // Getter: returns parents of a member
+  // Look up the member for this screen; undefined if ID is missing or not found
   const member = memberId ? getMemberById(memberId) : undefined;
 
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [addMode, setAddMode] = useState<AddMode>('child');
+  // --- Add Member Modal State ---
+  const [isAddOpen, setIsAddOpen] = useState(false); // Whether the add-member modal is visible
+  const [addMode, setAddMode] = useState<AddMode>('child'); // Which type of member we're adding
   const [form, setForm] = useState<NewMemberInput>({
+    // Form data for the new member
     firstName: '',
-    lastName: member?.lastName || '',
+    lastName: member?.lastName || '', // Default last name to the current member's last name
     gender: undefined,
-    relationshipType: 'biological',
+    relationshipType: 'biological', // Default relationship type
   });
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isRelativeOpen, setIsRelativeOpen] = useState(false);
-  const [relativeStep, setRelativeStep] = useState<RelativeStep>('relation');
-  const [relativeType, setRelativeType] = useState<ExtendedRelativeType | null>(null);
-  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
-  const [selectedAuntUncleId, setSelectedAuntUncleId] = useState<string | null>(null);
+  const [birthDateText, setBirthDateText] = useState(''); // Raw text for birth date input
+  const [formError, setFormError] = useState<string | null>(null); // Validation error message
+  const [isSaving, setIsSaving] = useState(false); // Loading state during save
+
+  // --- Add Relative Wizard State ---
+  const [isRelativeOpen, setIsRelativeOpen] = useState(false); // Whether the relative wizard modal is visible
+  const [relativeStep, setRelativeStep] = useState<RelativeStep>('relation'); // Current step in the 3-step wizard
+  const [relativeType, setRelativeType] = useState<ExtendedRelativeType | null>(null); // Chosen type: grandparent, aunt-uncle, or cousin
+  const [selectedParentId, setSelectedParentId] = useState<string | null>(null); // Which parent was selected as anchor (for grandparent/aunt-uncle)
+  const [selectedAuntUncleId, setSelectedAuntUncleId] = useState<string | null>(null); // Which aunt/uncle was selected as anchor (for cousin)
   const [relativeForm, setRelativeForm] = useState<NewMemberInput>({
+    // Form data for the new relative
     firstName: '',
-    lastName: member?.lastName || '',
+    lastName: member?.lastName || '', // Default last name to the current member's last name
     gender: undefined,
     relationshipType: 'biological',
   });
-  const [relativeError, setRelativeError] = useState<string | null>(null);
-  const [isRelativeSaving, setIsRelativeSaving] = useState(false);
-  const [isManageOpen, setIsManageOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [relativeError, setRelativeError] = useState<string | null>(null); // Validation error for the relative wizard
+  const [isRelativeSaving, setIsRelativeSaving] = useState(false); // Loading state during relative save
+
+  // --- Manage Family Modal State ---
+  const [isManageOpen, setIsManageOpen] = useState(false); // Whether the manage family modal is visible
+
+  // --- Remove Member Confirmation State ---
+  const [isConfirmRemoveOpen, setIsConfirmRemoveOpen] = useState(false); // Whether the removal confirmation dialog is visible
+  const [isRemoving, setIsRemoving] = useState(false); // Loading state during member removal
+
+  // --- Edit Member Modal State ---
+  const [isEditOpen, setIsEditOpen] = useState(false); // Whether the edit modal is visible
   const [editForm, setEditForm] = useState<NewMemberInput>({
+    // Form data pre-filled with the member's current info
     firstName: member?.firstName || '',
     lastName: member?.lastName || '',
     nickname: member?.nickname,
@@ -88,89 +219,188 @@ export default function MemberDetailScreen() {
     bio: member?.bio,
     gender: member?.gender,
   });
-  const [editError, setEditError] = useState<string | null>(null);
-  const [isEditSaving, setIsEditSaving] = useState(false);
+  // Pre-format birth date as MM/DD/YYYY string for the text input, or empty if none exists
+  const [editBirthDateText, setEditBirthDateText] = useState(
+    member?.birthDate
+      ? `${String(member.birthDate.getMonth() + 1).padStart(2, '0')}/${String(member.birthDate.getDate()).padStart(2, '0')}/${member.birthDate.getFullYear()}`
+      : '',
+  );
+  // Pre-format death date as MM/DD/YYYY string for the text input, or empty if none exists
+  const [editDeathDateText, setEditDeathDateText] = useState(
+    member?.deathDate
+      ? `${String(member.deathDate.getMonth() + 1).padStart(2, '0')}/${String(member.deathDate.getDate()).padStart(2, '0')}/${member.deathDate.getFullYear()}`
+      : '',
+  );
+  const [editError, setEditError] = useState<string | null>(null); // Validation error for the edit form
+  const [isEditSaving, setIsEditSaving] = useState(false); // Loading state during edit save
 
+  /**
+   * relationships — A memoized list of this member's relationships, enriched
+   * with the related member's full name. The raw relationship data only stores
+   * a `memberId` reference; this maps each one to include a human-readable name.
+   *
+   * `useMemo` ensures this mapping only re-runs when `member` or `members` changes,
+   * avoiding unnecessary recalculations on every render.
+   */
   const relationships = useMemo(() => {
+    // If the member hasn't loaded yet, return an empty array
     if (!member) return [];
+    // Map each relationship to include the related member's display name
     return member.relationships.map((rel) => {
+      // Look up the related member by their ID in the full members array
       const relatedMember = members.find((m) => m.id === rel.memberId);
       return {
-        ...rel,
+        ...rel, // Spread the original relationship data (type, kind, memberId)
+        // Build a display name, falling back to 'Unknown' if the member isn't found
         name: relatedMember ? `${relatedMember.firstName} ${relatedMember.lastName}` : 'Unknown',
       };
     });
   }, [member, members]);
 
+  // --- Derived Values (computed from the member's relationships) ---
+
+  // Check if this member already has a spouse (used to disable the "Add Spouse" button)
   const hasSpouse = member?.relationships.some((rel) => rel.type === 'spouse') ?? false;
+  // Count how many parents are on record (max 2 allowed in the data model)
   const parentCount = member?.relationships.filter((rel) => rel.type === 'parent').length ?? 0;
+  // A member can only have up to 2 parents
   const canAddParent = parentCount < 2;
+  // Siblings require at least one parent on record (so the sibling can be linked through the parent)
   const canAddSibling = parentCount >= 1;
+
+  /**
+   * parents — Memoized list of this member's parent FamilyMember objects.
+   * Used as anchor options in the "Add Relative" wizard for grandparents and aunts/uncles.
+   */
   const parents = useMemo(() => (member ? getParentsOf(member.id) : []), [member, getParentsOf]);
+
+  /**
+   * auntsUncles — Memoized list of this member's aunts and uncles.
+   * These are found by getting the siblings of each parent. A Map is used
+   * to deduplicate (if both parents share a sibling, they should only appear once).
+   * Used as anchor options when adding a cousin in the "Add Relative" wizard.
+   */
   const auntsUncles = useMemo(() => {
     if (!member) return [];
+    // Use a Map to ensure each aunt/uncle appears only once (keyed by their ID)
     const unique = new Map<string, FamilyMember>();
+    // For each of this member's parents...
     parents.forEach((parent) => {
+      // ...find all siblings of that parent
       getSiblings(parent.id, members).forEach((sibling) => {
+        // Exclude the parent themselves from the sibling list
         if (sibling.id !== parent.id) {
           unique.set(sibling.id, sibling);
         }
       });
     });
+    // Convert the Map values back into a plain array
     return Array.from(unique.values());
   }, [member, parents, members]);
 
+  /**
+   * Auto-open the manage modal when the `manage` query parameter is present.
+   * This allows other screens (like the tree view) to navigate here with
+   * `?manage=true` to immediately show the manage family options.
+   */
   useEffect(() => {
     if (manage && member) {
       setIsManageOpen(true);
     }
   }, [manage, member]);
 
+  /**
+   * openAddModal — Resets and opens the "Add Member" form modal.
+   * Pre-fills the last name with the current member's last name (common for
+   * family members) and defaults to biological relationship type.
+   *
+   * @param mode - Which type of member to add: 'spouse', 'child', 'sibling', or 'parent'
+   */
   const openAddModal = (mode: AddMode) => {
     if (!member) return;
-    setAddMode(mode);
+    setAddMode(mode); // Set which type of member we're adding
     setForm({
+      // Reset the form with sensible defaults
       firstName: '',
-      lastName: member.lastName,
+      lastName: member.lastName, // Pre-fill last name from current member
       gender: undefined,
       relationshipType: 'biological',
     });
-    setFormError(null);
-    setIsAddOpen(true);
+    setBirthDateText(''); // Clear any previously entered birth date
+    setFormError(null); // Clear any previous validation error
+    setIsAddOpen(true); // Show the modal
   };
 
+  /**
+   * closeAddModal — Hides the "Add Member" form modal and clears any error.
+   */
   const closeAddModal = () => {
     setIsAddOpen(false);
     setFormError(null);
   };
 
+  /**
+   * openRelativeModal — Resets all wizard state and opens the 3-step
+   * "Add Relative" wizard modal. Starts at step 1 ("relation").
+   */
   const openRelativeModal = () => {
     if (!member) return;
-    setRelativeType(null);
-    setRelativeStep('relation');
-    setSelectedParentId(null);
-    setSelectedAuntUncleId(null);
+    setRelativeType(null); // Clear any previously selected relation type
+    setRelativeStep('relation'); // Start at step 1
+    setSelectedParentId(null); // Clear parent anchor selection
+    setSelectedAuntUncleId(null); // Clear aunt/uncle anchor selection
     setRelativeForm({
+      // Reset the details form
       firstName: '',
-      lastName: member.lastName,
+      lastName: member.lastName, // Pre-fill last name from current member
       gender: undefined,
       relationshipType: 'biological',
     });
-    setRelativeError(null);
-    setIsRelativeOpen(true);
+    setRelativeError(null); // Clear any previous error
+    setIsRelativeOpen(true); // Show the wizard modal
   };
 
+  /**
+   * closeRelativeModal — Hides the "Add Relative" wizard and clears any error.
+   */
   const closeRelativeModal = () => {
     setIsRelativeOpen(false);
     setRelativeError(null);
   };
 
+  /**
+   * closeManageModal — Hides the "Manage Family" action menu modal.
+   */
   const closeManageModal = () => {
     setIsManageOpen(false);
   };
 
+  /**
+   * handleRemoveMember — Permanently deletes this family member from the store.
+   * Called when the user confirms removal in the confirmation dialog.
+   * On success, closes the dialog and navigates back to the previous screen.
+   * On failure, just stops the loading indicator (the error is silently caught).
+   */
+  const handleRemoveMember = async () => {
+    if (!member) return;
+    setIsRemoving(true); // Show loading indicator on the "Remove" button
+    try {
+      await removeMember(member.id); // Delete the member from the Zustand store
+      setIsConfirmRemoveOpen(false); // Close the confirmation dialog
+      router.back(); // Navigate back to the tree screen
+    } catch (error) {
+      setIsRemoving(false); // Stop loading on error
+    }
+  };
+
+  /**
+   * openEditModal — Pre-fills the edit form with the member's current data
+   * and opens the "Edit Member" modal. Date fields are formatted as
+   * MM/DD/YYYY strings for the text inputs.
+   */
   const openEditModal = () => {
     if (!member) return;
+    // Pre-fill every field with the member's current values
     setEditForm({
       firstName: member.firstName,
       lastName: member.lastName,
@@ -181,31 +411,83 @@ export default function MemberDetailScreen() {
       bio: member.bio,
       gender: member.gender,
     });
-    setEditError(null);
-    setIsEditOpen(true);
+    // Convert Date objects to display strings for the text input fields
+    setEditBirthDateText(formatDateForInput(member.birthDate));
+    setEditDeathDateText(formatDateForInput(member.deathDate));
+    setEditError(null); // Clear any previous error
+    setIsEditOpen(true); // Show the modal
   };
 
+  /**
+   * closeEditModal — Hides the "Edit Member" modal and clears any error.
+   */
   const closeEditModal = () => {
     setIsEditOpen(false);
     setEditError(null);
   };
 
+  /**
+   * handleEditSave — Validates the edit form and saves changes to the store.
+   *
+   * Validation steps:
+   *   1. Parse birth date text (if provided) and show error if format is invalid
+   *   2. Parse death date text (if provided) and show error if format is invalid
+   *   3. Trim whitespace from all string fields
+   *   4. Require first and last name to be non-empty
+   *
+   * On success, closes the edit modal. On failure, displays an error message.
+   */
   const handleEditSave = async () => {
     if (!member) return;
-    if (!editForm.firstName?.trim() || !editForm.lastName?.trim()) {
+
+    // Validate and parse the birth date text field
+    if (editBirthDateText.trim()) {
+      const parsed = parseDateText(editBirthDateText);
+      if (!parsed) {
+        setEditError('Invalid birth date. Use MM/DD/YYYY format.');
+        return; // Stop here — don't save with invalid data
+      }
+      editForm.birthDate = parsed; // Store the parsed Date object
+    } else {
+      editForm.birthDate = undefined; // Clear birth date if the field was emptied
+    }
+
+    // Validate and parse the death date text field
+    if (editDeathDateText.trim()) {
+      const parsed = parseDateText(editDeathDateText);
+      if (!parsed) {
+        setEditError('Invalid death date. Use MM/DD/YYYY format.');
+        return; // Stop here — don't save with invalid data
+      }
+      editForm.deathDate = parsed; // Store the parsed Date object
+    } else {
+      editForm.deathDate = undefined; // Clear death date if the field was emptied
+    }
+
+    // Trim whitespace from all text fields; convert empty optional fields to undefined
+    const trimmedForm = {
+      ...editForm,
+      firstName: editForm.firstName?.trim(),
+      lastName: editForm.lastName?.trim(),
+      nickname: editForm.nickname?.trim() || undefined, // Empty string becomes undefined
+      bio: editForm.bio?.trim() || undefined, // Empty string becomes undefined
+    };
+    // First and last name are required fields
+    if (!trimmedForm.firstName || !trimmedForm.lastName) {
       setEditError('First and last name are required.');
       return;
     }
 
-    setIsEditSaving(true);
-    setEditError(null);
+    setIsEditSaving(true); // Show loading state on the Save button
+    setEditError(null); // Clear any previous error
     try {
-      await updateMember(member.id, editForm);
-      setIsEditOpen(false);
+      await updateMember(member.id, trimmedForm); // Persist changes to the Zustand store
+      setIsEditOpen(false); // Close the modal on success
     } catch (error) {
+      // Display the error message to the user
       setEditError(error instanceof Error ? error.message : 'Failed to update member.');
     } finally {
-      setIsEditSaving(false);
+      setIsEditSaving(false); // Always stop the loading indicator
     }
   };
 
@@ -247,7 +529,14 @@ export default function MemberDetailScreen() {
 
   const handleRelativeSave = async () => {
     if (!member || !relativeType) return;
-    if (!relativeForm.firstName.trim() || !relativeForm.lastName.trim()) {
+    const trimmedForm = {
+      ...relativeForm,
+      firstName: relativeForm.firstName.trim(),
+      lastName: relativeForm.lastName.trim(),
+      nickname: relativeForm.nickname?.trim() || undefined,
+      bio: relativeForm.bio?.trim() || undefined,
+    };
+    if (!trimmedForm.firstName || !trimmedForm.lastName) {
       setRelativeError('First and last name are required.');
       return;
     }
@@ -259,9 +548,10 @@ export default function MemberDetailScreen() {
         relation: relativeType,
         parentId: relativeType === 'cousin' ? undefined : (selectedParentId ?? undefined),
         auntUncleId: relativeType === 'cousin' ? (selectedAuntUncleId ?? undefined) : undefined,
-        input: relativeForm,
+        input: trimmedForm,
       });
       closeRelativeModal();
+      router.back();
     } catch (error) {
       setRelativeError(error instanceof Error ? error.message : 'Failed to add relative.');
     } finally {
@@ -271,7 +561,24 @@ export default function MemberDetailScreen() {
 
   const handleSave = async () => {
     if (!member) return;
-    if (!form.firstName.trim() || !form.lastName.trim()) {
+
+    if (birthDateText.trim()) {
+      const parsed = parseDateText(birthDateText);
+      if (!parsed) {
+        setFormError('Invalid birth date. Use MM/DD/YYYY format.');
+        return;
+      }
+      form.birthDate = parsed;
+    }
+
+    const trimmedForm = {
+      ...form,
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      nickname: form.nickname?.trim() || undefined,
+      bio: form.bio?.trim() || undefined,
+    };
+    if (!trimmedForm.firstName || !trimmedForm.lastName) {
       setFormError('First and last name are required.');
       return;
     }
@@ -280,15 +587,16 @@ export default function MemberDetailScreen() {
     setFormError(null);
     try {
       if (addMode === 'spouse') {
-        await addSpouse(member.id, form);
+        await addSpouse(member.id, trimmedForm);
       } else if (addMode === 'child') {
-        await addChild(member.id, form);
+        await addChild(member.id, trimmedForm);
       } else if (addMode === 'sibling') {
-        await addSibling(member.id, form);
+        await addSibling(member.id, trimmedForm);
       } else {
-        await addParent(member.id, form);
+        await addParent(member.id, trimmedForm);
       }
       closeAddModal();
+      router.back();
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Failed to add member.');
     } finally {
@@ -475,6 +783,17 @@ export default function MemberDetailScreen() {
                   openRelativeModal();
                 }}
               />
+              <Button
+                title="Remove Member"
+                variant="ghost"
+                size="sm"
+                onPress={() => {
+                  closeManageModal();
+                  setIsConfirmRemoveOpen(true);
+                }}
+                style={styles.removeButton}
+                textStyle={styles.removeButtonText}
+              />
             </View>
 
             {!hasSpouse && (
@@ -515,6 +834,7 @@ export default function MemberDetailScreen() {
               value={form.firstName}
               onChangeText={(value) => setForm((prev) => ({ ...prev, firstName: value }))}
               autoCapitalize="words"
+              maxLength={50}
             />
             <TextInput
               style={styles.input}
@@ -523,6 +843,7 @@ export default function MemberDetailScreen() {
               value={form.lastName}
               onChangeText={(value) => setForm((prev) => ({ ...prev, lastName: value }))}
               autoCapitalize="words"
+              maxLength={50}
             />
 
             <View style={styles.genderRow}>
@@ -543,6 +864,16 @@ export default function MemberDetailScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Birth date (MM/DD/YYYY)"
+              placeholderTextColor={colors.text.tertiary}
+              value={birthDateText}
+              onChangeText={setBirthDateText}
+              keyboardType="numbers-and-punctuation"
+              maxLength={10}
+            />
 
             {addMode !== 'spouse' && (
               <View style={styles.relationshipRow}>
@@ -734,6 +1065,7 @@ export default function MemberDetailScreen() {
                     setRelativeForm((prev) => ({ ...prev, firstName: value }))
                   }
                   autoCapitalize="words"
+                  maxLength={50}
                 />
                 <TextInput
                   style={styles.input}
@@ -744,6 +1076,7 @@ export default function MemberDetailScreen() {
                     setRelativeForm((prev) => ({ ...prev, lastName: value }))
                   }
                   autoCapitalize="words"
+                  maxLength={50}
                 />
 
                 <View style={styles.genderRow}>
@@ -846,6 +1179,7 @@ export default function MemberDetailScreen() {
               value={editForm.firstName}
               onChangeText={(value) => setEditForm((prev) => ({ ...prev, firstName: value }))}
               autoCapitalize="words"
+              maxLength={50}
             />
             <TextInput
               style={styles.input}
@@ -854,6 +1188,7 @@ export default function MemberDetailScreen() {
               value={editForm.lastName}
               onChangeText={(value) => setEditForm((prev) => ({ ...prev, lastName: value }))}
               autoCapitalize="words"
+              maxLength={50}
             />
             <TextInput
               style={styles.input}
@@ -862,6 +1197,7 @@ export default function MemberDetailScreen() {
               value={editForm.nickname}
               onChangeText={(value) => setEditForm((prev) => ({ ...prev, nickname: value }))}
               autoCapitalize="words"
+              maxLength={50}
             />
             <TextInput
               style={[styles.input, styles.bioInput]}
@@ -870,6 +1206,26 @@ export default function MemberDetailScreen() {
               value={editForm.bio}
               onChangeText={(value) => setEditForm((prev) => ({ ...prev, bio: value }))}
               multiline
+              maxLength={500}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Birth date (MM/DD/YYYY)"
+              placeholderTextColor={colors.text.tertiary}
+              value={editBirthDateText}
+              onChangeText={setEditBirthDateText}
+              keyboardType="numbers-and-punctuation"
+              maxLength={10}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Death date (MM/DD/YYYY)"
+              placeholderTextColor={colors.text.tertiary}
+              value={editDeathDateText}
+              onChangeText={setEditDeathDateText}
+              keyboardType="numbers-and-punctuation"
+              maxLength={10}
             />
 
             <View style={styles.genderRow}>
@@ -907,6 +1263,39 @@ export default function MemberDetailScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isConfirmRemoveOpen}
+        onRequestClose={() => setIsConfirmRemoveOpen(false)}
+      >
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>Remove {member.firstName}?</Text>
+            <Text style={styles.confirmMessage}>
+              This will permanently delete this member and all their connections. This cannot be
+              undone.
+            </Text>
+            <View style={styles.modalActions}>
+              <Button
+                title="Cancel"
+                variant="ghost"
+                size="sm"
+                onPress={() => setIsConfirmRemoveOpen(false)}
+                disabled={isRemoving}
+              />
+              <Button
+                title={isRemoving ? 'Removing...' : 'Remove'}
+                size="sm"
+                onPress={handleRemoveMember}
+                loading={isRemoving}
+                style={styles.removeConfirmButton}
+              />
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -1223,5 +1612,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: spacing.md,
+  },
+  removeButton: {
+    borderWidth: 1,
+    borderColor: colors.heart,
+  },
+  removeButtonText: {
+    color: colors.heart,
+  },
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmCard: {
+    backgroundColor: colors.background.primary,
+    marginHorizontal: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.xl,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+  },
+  confirmMessage: {
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: spacing.lg,
+    lineHeight: 20,
+  },
+  removeConfirmButton: {
+    backgroundColor: colors.heart,
   },
 });

@@ -1,7 +1,7 @@
 ---
 name: gsd:research-phase
 description: Research how to implement a phase (standalone - usually use /gsd:plan-phase instead)
-argument-hint: "[phase]"
+argument-hint: '[phase]'
 allowed-tools:
   - Read
   - Bash
@@ -14,6 +14,7 @@ Research how to implement a phase. Spawns gsd-phase-researcher agent with phase 
 **Note:** This is a standalone research command. For most workflows, use `/gsd:plan-phase` which integrates research automatically.
 
 **Use this command when:**
+
 - You want to research without planning yet
 - You want to re-research after planning is complete
 - You need to investigate before deciding if a phase is feasible
@@ -31,40 +32,27 @@ Normalize phase input in step 1 before any directory lookups.
 
 <process>
 
-## 0. Resolve Model Profile
-
-Read model profile for agent spawning:
+## 0. Initialize Context
 
 ```bash
-MODEL_PROFILE=$(cat .planning/config.json 2>/dev/null | grep -o '"model_profile"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "balanced")
+INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.js init phase-op "$ARGUMENTS")
 ```
 
-Default to "balanced" if not set.
+Extract from init JSON: `phase_dir`, `phase_number`, `phase_name`, `phase_found`, `commit_docs`, `has_research`.
 
-**Model lookup table:**
-
-| Agent | quality | balanced | budget |
-|-------|---------|----------|--------|
-| gsd-phase-researcher | opus | sonnet | haiku |
-
-Store resolved model for use in Task calls below.
-
-## 1. Normalize and Validate Phase
+Resolve researcher model:
 
 ```bash
-# Normalize phase number (8 → 08, but preserve decimals like 2.1 → 02.1)
-if [[ "$ARGUMENTS" =~ ^[0-9]+$ ]]; then
-  PHASE=$(printf "%02d" "$ARGUMENTS")
-elif [[ "$ARGUMENTS" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
-  PHASE=$(printf "%02d.%s" "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}")
-else
-  PHASE="$ARGUMENTS"
-fi
-
-grep -A5 "Phase ${PHASE}:" .planning/ROADMAP.md 2>/dev/null
+RESEARCHER_MODEL=$(node ./.claude/get-shit-done/bin/gsd-tools.js resolve-model gsd-phase-researcher --raw)
 ```
 
-**If not found:** Error and exit. **If found:** Extract phase number, name, description.
+## 1. Validate Phase
+
+```bash
+PHASE_INFO=$(node ./.claude/get-shit-done/bin/gsd-tools.js roadmap get-phase "${phase_number}")
+```
+
+**If `found` is false:** Error and exit. **If `found` is true:** Extract `phase_number`, `phase_name`, `goal` from JSON.
 
 ## 2. Check Existing Research
 
@@ -79,7 +67,8 @@ ls .planning/phases/${PHASE}-*/RESEARCH.md 2>/dev/null
 ## 3. Gather Phase Context
 
 ```bash
-grep -A20 "Phase ${PHASE}:" .planning/ROADMAP.md
+# Phase section already loaded in PHASE_INFO
+echo "$PHASE_INFO" | jq -r '.section'
 cat .planning/REQUIREMENTS.md 2>/dev/null
 cat .planning/phases/${PHASE}-*/*-CONTEXT.md 2>/dev/null
 grep -A30 "### Decisions Made" .planning/STATE.md 2>/dev/null
@@ -102,12 +91,13 @@ The question is NOT "which library should I use?"
 The question is: "What do I not know that I don't know?"
 
 For this phase, discover:
+
 - What's the established architecture pattern?
 - What libraries form the standard stack?
 - What problems do people commonly hit?
 - What's SOTA vs what Claude's training thinks is SOTA?
 - What should NOT be hand-rolled?
-</key_insight>
+  </key_insight>
 
 <objective>
 Research implementation approach for Phase {phase_number}: {phase_name}
@@ -123,6 +113,7 @@ Mode: ecosystem
 
 <downstream_consumer>
 Your RESEARCH.md will be loaded by `/gsd:plan-phase` which uses specific sections:
+
 - `## Standard Stack` → Plans use these libraries
 - `## Architecture Patterns` → Task structure follows these
 - `## Don't Hand-Roll` → Tasks NEVER build custom solutions for listed problems
@@ -134,12 +125,13 @@ Be prescriptive, not exploratory. "Use X" not "Consider X or Y."
 
 <quality_gate>
 Before declaring complete, verify:
+
 - [ ] All domains investigated (not just some)
 - [ ] Negative claims verified with official docs
 - [ ] Multiple sources for critical claims
 - [ ] Confidence levels assigned honestly
 - [ ] Section names match what plan-phase expects
-</quality_gate>
+      </quality_gate>
 
 <output>
 Write to: .planning/phases/${PHASE}-{slug}/${PHASE}-RESEARCH.md
@@ -192,9 +184,10 @@ Task(
 </process>
 
 <success_criteria>
+
 - [ ] Phase validated against roadmap
 - [ ] Existing research checked
 - [ ] gsd-phase-researcher spawned with context
 - [ ] Checkpoints handled correctly
 - [ ] User knows next steps
-</success_criteria>
+      </success_criteria>
