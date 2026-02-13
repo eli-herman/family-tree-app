@@ -74,12 +74,20 @@ RULES:
 - Each issue has: severity (error/warning/info), message, and optional line number
 - Focus on: incorrect file paths, missing exports, outdated structure descriptions
 - Be factual and specific`,
+
+  summarize: `You are a code structure summarizer. You extract key structural information from source files to create concise summaries.
+RULES:
+- Return ONLY valid JSON
+- Focus on exports, imports, function signatures, and purpose
+- Be concise: one-line descriptions
+- Never include implementation details or code blocks
+- Never add explanations outside JSON`,
 };
 
 // Task-specific prompt templates
 export const TASK_PROMPTS = {
   extractFrontmatter: (fileContent: string, fields: string[]) => `
-Extract these fields from the YAML frontmatter: ${fields.join(", ")}
+Extract these fields from the YAML frontmatter: ${fields.join(', ')}
 
 FILE CONTENT:
 \`\`\`
@@ -93,7 +101,7 @@ OUTPUT (JSON only):
 }`,
 
   extractPattern: (fileContent: string, patterns: string[]) => `
-Find these patterns in the file: ${patterns.join(", ")}
+Find these patterns in the file: ${patterns.join(', ')}
 
 FILE CONTENT:
 \`\`\`
@@ -112,7 +120,7 @@ OUTPUT (JSON only):
     description: string,
     fileContent: string,
     conditionType: string,
-    conditionValue: string
+    conditionValue: string,
   ) => `
 CHECK: ${checkId} - ${description}
 CONDITION: ${conditionType} "${conditionValue}"
@@ -213,12 +221,7 @@ OUTPUT (JSON only):
   }
 }`,
 
-  reviewApproach: (
-    goal: string,
-    approach: string,
-    context: string,
-    existingCode?: string
-  ) => `
+  reviewApproach: (goal: string, approach: string, context: string, existingCode?: string) => `
 You are a senior engineer reviewing a proposed implementation approach BEFORE coding begins.
 
 GOAL:
@@ -257,7 +260,7 @@ OUTPUT (JSON only):
     sessionSummary: string,
     activeTasks: string[],
     blockers: string[],
-    nextSteps: string[]
+    nextSteps: string[],
   ) => `
 Summarize this session for a developer switching devices. Be concise (3-5 sentences).
 
@@ -265,16 +268,16 @@ GIT CONTEXT:
 ${gitContext}
 
 SESSION SUMMARY:
-${sessionSummary || "No session summary provided."}
+${sessionSummary || 'No session summary provided.'}
 
 ACTIVE TASKS:
-${activeTasks.length > 0 ? activeTasks.join("\n") : "None"}
+${activeTasks.length > 0 ? activeTasks.join('\n') : 'None'}
 
 BLOCKERS:
-${blockers.length > 0 ? blockers.join("\n") : "None"}
+${blockers.length > 0 ? blockers.join('\n') : 'None'}
 
 NEXT STEPS:
-${nextSteps.length > 0 ? nextSteps.join("\n") : "Not specified"}
+${nextSteps.length > 0 ? nextSteps.join('\n') : 'Not specified'}
 
 Provide: what was accomplished, current state, and what to do next.`,
 
@@ -284,7 +287,7 @@ Generate a conventional commit message for these staged changes.
 STAGED FILES:
 ${stagedFiles}
 
-${context ? `CONTEXT: ${context}\n` : ""}
+${context ? `CONTEXT: ${context}\n` : ''}
 DIFF:
 \`\`\`
 ${diff}
@@ -318,12 +321,34 @@ OUTPUT (JSON only):
   ]
 }`,
 
-  reviewCode: (
-    goal: string,
-    code: string,
-    filepath: string,
-    originalCode?: string
-  ) => `
+  summarizeFile: (content: string, filepath: string, depth: 'standard' | 'detailed') => `
+Summarize the structure of this source file: ${filepath}
+
+FILE CONTENT:
+\`\`\`
+${content}
+\`\`\`
+
+OUTPUT (JSON only):
+{
+  "purpose": "one-line description of what this file does",
+  "lines": number,
+  "exports": ["exportName (type)", ...],
+  "imports": ["module-path", ...],
+  "key_functions": [
+    "functionName(params) - one-line description",
+    ...
+  ]${
+    depth === 'detailed'
+      ? `,
+  "type_definitions": ["TypeName - description", ...],
+  "component_props": ["propName: type - description", ...],
+  "full_signatures": ["full function/method signature", ...]`
+      : ''
+  }
+}`,
+
+  reviewCode: (goal: string, code: string, filepath: string, originalCode?: string) => `
 You are a senior engineer reviewing code AFTER implementation.
 
 GOAL:

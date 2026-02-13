@@ -5,6 +5,109 @@
 
 ---
 
+## 2026-02-09 - Family Management Entry Point + Relationship Wizard
+
+### Changes
+
+- Added a “Manage Family” button on the tree screen that opens a manage modal for add/edit actions.
+- Removed the Add Family section from the member profile and centralized add flows in the manage modal.
+- Implemented an extended relative wizard (grandparent, aunt/uncle, cousin) with anchor validation.
+- Added member edit flow and store update action.
+
+### Files Affected
+
+- `app/(tabs)/tree.tsx`
+- `app/member/[id].tsx`
+- `src/stores/familyStore.ts`
+- `src/types/user.ts`
+- `.claude/agents/status-board.md`
+
+### For Other Agents
+
+- Manage entry uses `manage=1` param on `/member/[id]` to auto-open the modal.
+
+## 2026-02-09 - Paywall Close Button Padding
+
+### Changes
+
+- Reduced top padding above the paywall close button by tightening header and button spacing.
+
+### Files Affected
+
+- `app/paywall.tsx`
+- `.claude/agents/status-board.md`
+
+### For Other Agents
+
+- Safe area still handled via safe-area-context; only spacing was adjusted.
+
+## 2026-02-09 - Paywall Close Button Spacing
+
+### Changes
+
+- Moved the paywall close button into the header flow and added spacing so it no longer crowds the title.
+
+### Files Affected
+
+- `app/paywall.tsx`
+- `.claude/agents/status-board.md`
+
+### For Other Agents
+
+- Close button now relies on header flow spacing instead of absolute positioning.
+
+## 2026-02-09 - Paywall Recommended Border Fix
+
+### Changes
+
+- Removed the “recommended” border highlight so only the selected tier shows a green border.
+
+### Files Affected
+
+- `app/paywall.tsx`
+- `.claude/agents/status-board.md`
+
+### For Other Agents
+
+- Recommended badge still marks the Family plan; selection state now drives border color only.
+
+## 2026-02-09 - Paywall Polish (Phase 2)
+
+### Changes
+
+- Switched paywall to safe-area-context insets, added footer safe-area padding, and ensured scroll content clears the sticky footer.
+- Increased touch targets for paywall buttons and UpgradeBanner actions to meet 44pt minimums.
+- Moved savings badge into flow to avoid overlap with the selection indicator; added tier container top padding.
+
+### Files Affected
+
+- `app/paywall.tsx`
+- `src/components/common/UpgradeBanner.tsx`
+- `.claude/agents/status-board.md`
+
+### For Other Agents
+
+- Paywall remains a full-screen push; switch to modal only if desired.
+
+## 2026-02-08 - Relationship Wizard Plan
+
+### Changes
+
+- Started planning a guided add-member wizard for extended relatives (uncle/cousin/grandparent)
+- Documented mapping rules and focus behavior in HANDOFF
+- Added GitHub Education Benefits note + Student Pack tool shortlist for the project
+
+### Files Affected
+
+- `HANDOFF.md`
+- `.claude/agents/status-board.md`
+- `.claude/changelog.md`
+
+### For Other Agents
+
+- The goal is “simple questions → base graph ops” with auto-focus so new members appear immediately.
+- Student Pack tools to prioritize: Sentry, Doppler, 1Password, BrowserStack, GitHub Pages.
+
 ## 2026-02-08 - Tree Focus Anchor After Add
 
 ### Changes

@@ -4,8 +4,8 @@
  * Caches remote health check to avoid repeated pings
  */
 
-import { config } from "./config.js";
-import { events } from "./events.js";
+import { config } from './config.js';
+import { events } from './events.js';
 
 export type ModelTarget = 'local' | 'remote' | 'embeddings';
 
@@ -26,12 +26,7 @@ export interface TaskInfo {
 }
 
 // Tasks that always go to specific models
-const ALWAYS_REMOTE = [
-  'review_code',
-  'review_approach',
-  'complex_analysis',
-  'refactor_suggest',
-];
+const ALWAYS_REMOTE = ['review_code', 'review_approach', 'complex_analysis', 'refactor_suggest'];
 
 const ALWAYS_LOCAL = [
   'frontmatter',
@@ -44,12 +39,10 @@ const ALWAYS_LOCAL = [
   'doc_check_paths',
   'doc_check_exports',
   'doc_check_structure',
+  'summarize',
 ];
 
-const ALWAYS_EMBEDDINGS = [
-  'semantic_search',
-  'find_similar',
-];
+const ALWAYS_EMBEDDINGS = ['semantic_search', 'find_similar'];
 
 // Cached remote health status (avoids pinging on every call)
 let remoteHealthy: boolean | null = null;
@@ -76,9 +69,8 @@ export function getRoutingStats(): {
   remoteUtilization: string;
 } {
   const total = routingStats.localCalls + routingStats.remoteCalls + routingStats.embeddingsCalls;
-  const remoteUtilization = total > 0
-    ? ((routingStats.remoteCalls / total) * 100).toFixed(1)
-    : '0.0';
+  const remoteUtilization =
+    total > 0 ? ((routingStats.remoteCalls / total) * 100).toFixed(1) : '0.0';
   return {
     ...routingStats,
     remoteUtilization: `${remoteUtilization}%`,
@@ -212,7 +204,11 @@ export async function routeTask(task: TaskInfo): Promise<RoutingDecision> {
 
   if (complexity >= threshold && remoteUp) {
     routingStats.remoteCalls++;
-    events.routeDecision(task.type, 'remote', `Complexity ${complexity.toFixed(2)} >= ${threshold}`);
+    events.routeDecision(
+      task.type,
+      'remote',
+      `Complexity ${complexity.toFixed(2)} >= ${threshold}`,
+    );
     return {
       target: 'remote',
       reason: `Complexity ${complexity.toFixed(2)} exceeds threshold ${threshold}`,
