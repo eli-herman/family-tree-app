@@ -55,7 +55,7 @@ import { TreeNode, TREE_NODE_HEIGHT, TREE_NODE_WIDTH } from '../../src/component
 import { Avatar } from '../../src/components/common'; // Shared avatar component for the manage modal
 import { borderRadius, colors, spacing } from '../../src/constants'; // Design system tokens
 import { FamilyMember, FamilyUnit, FamilyTreeData, isFamilyUnit } from '../../src/types'; // TypeScript types and type guard for the tree data model
-import { useFamilyStore } from '../../src/stores'; // Zustand store holding family members, units, and tree builder
+import { useFamilyStore, useUserStore } from '../../src/stores'; // Zustand stores for family data and current user
 
 // =============================================================================
 // LAYOUT CONSTANTS
@@ -476,6 +476,7 @@ export default function TreeScreen() {
   const members = useFamilyStore((state) => state.members);
   const units = useFamilyStore((state) => state.units);
   const clearLastAdded = useFamilyStore((state) => state.clearLastAdded);
+  const currentMemberId = useUserStore((state) => state.currentMemberId);
 
   // Gesture shared values
   const scale = useSharedValue(1);
@@ -493,7 +494,7 @@ export default function TreeScreen() {
     setViewportSize({ width, height });
   }, []);
 
-  const tree = useMemo(() => buildFamilyTree(), [members, units, buildFamilyTree]);
+  const tree = useMemo(() => buildFamilyTree(), [members, units, buildFamilyTree, currentMemberId]);
 
   const layout = useMemo(() => {
     if (!tree) return EMPTY_LAYOUT;
@@ -575,21 +576,54 @@ export default function TreeScreen() {
     });
   }, [members]);
 
-  // Auto-center on focus member after add
+  const [initialFocusDone, setInitialFocusDone] = useState(false);
+
+  // Helper: compute translation to center a frame in the viewport.
+  // Since panArea flexbox already centers the tree canvas, translations are
+  // relative to the canvas center and must account for the current scale
+  // (transforms apply: translate → scale-from-center).
+  const centerOn = useCallback(
+    (frame: NodeFrame, currentScale: number) => {
+      const treeCX = layout.treeSize.width / 2;
+      const treeCY = layout.treeSize.height / 2;
+      const tx = -currentScale * (frame.x + frame.width / 2 - treeCX);
+      const ty = -currentScale * (frame.y + frame.height / 2 - treeCY);
+      return { tx, ty };
+    },
+    [layout.treeSize.width, layout.treeSize.height],
+  );
+
+  // On initial load, center on the current user (not a stale lastAddedMemberId)
   useEffect(() => {
-    if (!tree?.focusMemberId || !layout.frames[tree.focusMemberId]) return;
+    if (initialFocusDone) return;
+    const targetId = currentMemberId;
+    if (!targetId || !layout.frames[targetId]) return;
+    const frame = layout.frames[targetId];
+    if (!frame || viewportSize.width <= 1) return;
+
+    const { tx, ty } = centerOn(frame, scale.value);
+    translateX.value = tx;
+    translateY.value = ty;
+    savedTranslateX.value = tx;
+    savedTranslateY.value = ty;
+    clearLastAdded();
+    setInitialFocusDone(true);
+  }, [initialFocusDone, currentMemberId, layout.frames, viewportSize, centerOn]);
+
+  // After initial load, animate to newly added members
+  useEffect(() => {
+    if (!initialFocusDone) return;
+    if (!tree?.focusMemberId || tree.focusMemberId === currentMemberId) return;
     const frame = layout.frames[tree.focusMemberId];
     if (!frame || viewportSize.width <= 1) return;
 
-    const centerX = -(frame.x + frame.width / 2 - viewportSize.width / 2);
-    const centerY = -(frame.y + frame.height / 2 - viewportSize.height / 2);
-
-    translateX.value = withTiming(centerX, { duration: 400 });
-    translateY.value = withTiming(centerY, { duration: 400 });
-    savedTranslateX.value = centerX;
-    savedTranslateY.value = centerY;
+    const { tx, ty } = centerOn(frame, scale.value);
+    translateX.value = withTiming(tx, { duration: 400 });
+    translateY.value = withTiming(ty, { duration: 400 });
+    savedTranslateX.value = tx;
+    savedTranslateY.value = ty;
     clearLastAdded();
-  }, [tree?.focusMemberId, layout.frames, viewportSize]);
+  }, [initialFocusDone, tree?.focusMemberId, layout.frames, viewportSize, centerOn]);
 
   const connectors = useMemo(() => {
     if (!tree) {
