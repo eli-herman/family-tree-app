@@ -1,83 +1,89 @@
-# The Vine - MVP Stabilization
+# The Vine
 
 ## What This Is
 
-The Vine is a private Christian family connection app for preserving memories, strengthening bonds, and sharing faith across generations. Built with React Native (Expo) + Firebase, it features a family updates feed, visual family tree, daily Bible verses, and heart reactions. This milestone focuses on stabilizing the MVP — making all free tier features work correctly with mock data in iOS/Android simulators.
+The Vine is a private Christian family connection app for preserving memories, strengthening bonds, and sharing faith across generations. Built with React Native (Expo) + Firebase, it features a family updates feed, visual family tree, daily Bible verses, and heart reactions.
 
 ## Core Value
 
-**Families can view, interact with, and navigate their family connections without bugs or broken flows.** Every tap should do something meaningful. Every screen should be reachable and functional.
+**A private, faith-centered space where families stay connected across generations.** Every feature serves the mission of bringing families closer through shared memories, daily devotion, and intuitive family tree visualization.
 
-## Requirements
+## Current State
 
-### Validated
+**Shipped:** v0.1 MVP Stabilization (2026-02-15)
+**Current milestone:** v1.0 (in progress)
 
-- ✓ Tab navigation (Feed, Tree, Profile) — existing
-- ✓ Daily Bible verse display — existing
-- ✓ Basic family tree visualization with vine connectors — existing
-- ✓ Heart reactions on feed items — existing
-- ✓ Subscription store with tier limits — existing
-- ✓ Paywall screen structure — existing
-- ✓ Design system (colors, typography, spacing) — existing
-- ✓ Mock data utilities — existing
+### Validated Capabilities (from v0.1)
 
-### Active
+- ✓ Tab navigation (Feed, Tree, Profile) — Expo Router
+- ✓ Daily Bible verse display with curated family-themed verses
+- ✓ Family tree visualization with deterministic layout engine
+- ✓ Single SVG overlay vine connectors (circuit-like aesthetic)
+- ✓ Pinch-to-zoom and pan gestures on tree
+- ✓ Tree auto-centers on current user, animates to new members
+- ✓ Heart reactions on feed items with immediate state updates
+- ✓ Zustand stores: familyStore, userStore, feedStore, authStore, subscriptionStore
+- ✓ Firebase Auth (login, signup, forgot-password) with AuthGate
+- ✓ Firestore-backed family units with typed child links
+- ✓ Add member flow: spouse, parent, child, sibling
+- ✓ Relationship derivation from family units (not stored on member docs)
+- ✓ One partner at a time enforcement
+- ✓ Member profile modal (basic — name, avatar, add-member actions)
+- ✓ Design system (colors, typography, spacing, borderRadius)
+- ✓ Accessibility labels/roles on all interactive controls
+- ✓ ErrorBoundary with safe fallback UI
+- ✓ Dev-only Firestore seed (mock data → Firestore on empty DB)
+- ✓ CI/CD: GitHub Actions, ESLint, Prettier, Husky, Jest
+- ✓ Subscription store with tier limits (UI only, no real purchases)
+- ✓ Paywall screen structure (needs polish)
 
-- [ ] Fix paywall.tsx spacing issues
-- [ ] Family member tap → profile modal with full info
-- [ ] Member profile displays: name, photo, relationship, birthday, family connections, stories, pictures
-- [ ] Navigation buttons work throughout app
-- [ ] Feed actions: hearts (working), comments (placeholder → functional), sharing
-- [ ] Profile actions: edit profile, settings menu items, logout
-- [ ] Tree interactions: tap any family member to view profile
-- [ ] All screens render correctly in iOS/Android simulators
-- [ ] Mock data flows through entire app without errors
+### Active (v1.0 Milestone)
+
+Requirements defined in `.planning/REQUIREMENTS.md`
 
 ### Out of Scope
 
-- Firebase backend integration — mock data only for now
-- RevenueCat purchases — UI only, no real transactions
-- Audio/video memories — paid tier feature, not in free plan
-- Real authentication — mock user for development
-- Push notifications — deferred to post-MVP
+- Audio/video memories — paid tier feature, future milestone
+- Push notifications — requires backend infrastructure
+- Multi-family support — single family per account for now
+- Web version — mobile-first, React Native only
 
 ## Context
 
-**Existing codebase state:**
-- Expo Router navigation in place with tabs and modal routes
-- Component library exists: Avatar, Button, Card, FeedItem, TreeNode, VineConnector
-- Zustand stores: authStore, feedStore, subscriptionStore (all have structure but limited wiring)
-- Many buttons are placeholders with no onPress handlers
-- Member detail modal (`app/member/[id].tsx`) exists but needs full implementation
-- Paywall has spacing/layout issues to fix
+**Tech stack:**
 
-**Free tier limits (for reference):**
-- 5 family members max
-- 50 photos total
-- Basic family tree
-- Daily Bible verse
-- Heart reactions
+- React Native (Expo ~54.0.33) + TypeScript ~5.9.2
+- Firebase (Auth + Firestore) — project exists, auth enabled
+- Zustand for state management
+- Expo Router for navigation
+- React Native Reanimated + Gesture Handler for tree interactions
 
-**Development environment:**
-- Expo ~54.0.33, React Native 0.81.5, TypeScript ~5.9.2
-- iOS Simulator and Android Emulator for testing
-- No backend required — all mock data
+**Development team (3 agents):**
 
-## Constraints
+- **Claude** — Complex architecture, multi-file changes, debugging
+- **Codex** — Isolated tasks via GitHub Issues (labeled `codex-task`), branch + PR workflow
+- **Eli** — Beginner React tasks matched to Codedex course progress (learning components, props, JSX)
 
-- **Tech stack**: React Native (Expo) + TypeScript — already established
-- **Data source**: Mock data only — no Firebase calls
-- **Scope**: Free tier features only — no premium features
-- **Platform**: Must work in both iOS and Android simulators
-- **No new dependencies**: Use existing packages where possible
+**Constraints:**
+
+- Firebase Spark plan (free tier) — no Cloud Functions, limited storage
+- RevenueCat account not yet created
+- Apple Developer account not yet created
+- Eli is learning React through Codedex — tasks should build on course progress
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| Mock data only | Decouple UI stabilization from backend complexity | — Pending |
-| Free tier scope | Ship core experience before adding premium features | — Pending |
-| Fix before adding | Stabilize existing code rather than building new features | — Pending |
+| Decision                             | Rationale                                            | Outcome           |
+| ------------------------------------ | ---------------------------------------------------- | ----------------- |
+| Deterministic tree layout            | Eliminates measurement-driven jitter                 | Validated         |
+| Family units as canonical model      | Partners + typed child links in Firestore            | Validated         |
+| Single SVG overlay connectors        | Cleaner than per-unit connectors                     | Validated         |
+| Firebase Auth + AsyncStorage         | Hot-reload safe persistence                          | Validated         |
+| Siblings derived from shared parents | Simplifies storage, prevents inconsistencies         | Validated         |
+| One partner at a time                | Simplifies tree layout for v1                        | Active constraint |
+| Three-agent workflow                 | Claude (complex) + Codex (isolated) + Eli (learning) | Active            |
+| Milestone-based pace                 | Steady and thorough, not rushing                     | Active            |
 
 ---
-*Last updated: 2026-02-02 after initialization*
+
+_Last updated: 2026-02-15 after v0.1 archival_
