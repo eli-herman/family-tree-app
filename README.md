@@ -64,6 +64,12 @@ See `CONTRIBUTING.md` for guidelines.
 
 Secret scanning is enabled in GitHub settings (Repository Settings → Security & analysis).
 
+## AI Usage
+
+This project used AI tools (Codex and Claude Code) for ideation, debugging, and code refactoring. 
+All AI-generated output was reviewed and edited by the author before being
+merged into the codebase. No proprietary or sensitive data was shared with AI tools.
+
 ## License
 
 MIT - see `LICENSE` for details.
