@@ -5,11 +5,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/gsd-check-update.js"
+            "command": "node /Users/eli.j.herman/projects/family-tree-app/.claude/hooks/gsd-check-update.js"
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/handoff-reader.js"
+            "command": "node /Users/eli.j.herman/projects/family-tree-app/.claude/hooks/handoff-reader.js"
           }
         ]
       }
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/stop-auto-handoff.js",
+            "command": "node /Users/eli.j.herman/projects/family-tree-app/.claude/hooks/stop-auto-handoff.js",
             "timeout": 30
           }
         ]
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/post-commit-sync.js",
+            "command": "node /Users/eli.j.herman/projects/family-tree-app/.claude/hooks/post-commit-sync.js",
             "async": true
           }
         ]
@@ -40,6 +40,6 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "node .claude/hooks/gsd-statusline.js"
+    "command": "node /Users/eli.j.herman/projects/family-tree-app/.claude/hooks/gsd-statusline.js"
   }
 }
