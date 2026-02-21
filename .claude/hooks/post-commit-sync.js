@@ -47,6 +47,14 @@ process.stdin.on('end', () => {
     process.exit(0);
   }
 
+  // Only fire for commits in the family-tree-app repo — not dev-os or others
+  try {
+    const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+    if (!repoRoot.endsWith('family-tree-app')) process.exit(0);
+  } catch {
+    process.exit(0);
+  }
+
   // Check if .planning/ has any uncommitted changes (modified or untracked)
   const planningStatus = run('git status --porcelain .planning/');
   if (!planningStatus) process.exit(0);
