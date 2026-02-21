@@ -1,150 +1,70 @@
 ---
-device: Mac.lan
-branch: fix/tree-focus-anchor
-commit: fa3deb3
-timestamp: '2026-02-08T02:48:57Z'
+device: Elis-MacBook-Pro.local
+branch: main
+commit: 1f2abfc
+timestamp: 2026-02-21T17:37:40.711Z
 ---
-
 # Session Handoff
 
 ## Summary
 
-Last commit: `fa3deb3` on `fix/tree-focus-anchor`
+Last commit: `1f2abfc` on `main`
 
-> chore: update HANDOFF.md [31624c0]
+> fix: post-commit-sync hook — only fire for family-tree-app commits
 
-- Implemented Firestore-backed **family units** with single-parent support and typed child links.
-- Added `addSpouse`, `addChild`, `addSibling`, and `addParent` actions with relationship normalization.
-- Member profile now supports **Add Spouse/Add Parent/Add Child/Add Sibling** + relation type chips.
-- Tree layout + connectors now support single-parent units (no spouse line).
-- Enforced **one partner at a time** (blocks adding spouse if already partnered).
-- Tree nodes now navigate to member modal on tap.
-- Dev-only seed: if Firestore is empty, mock data is written to `families/demo-family/*`.
-- Added repo professionalism baseline: README, CONTRIBUTING, LICENSE.
-- Added ESLint + Prettier configs and lint/format scripts.
-- Added Jest config + initial relationship utility tests.
-- Added GitHub Actions CI plus issue/PR templates.
-- Added Husky + lint-staged pre-commit hooks.
-- Added a terminal-style README banner ("The Vine" + John 15:5).
-- Added `react-dom@19.1.0` to align with React and fix npm ERESOLVE on install.
-- Updated `eslint-config-expo` to `55.0.0`; `npm install`, lint, test, and typecheck now succeed.
-- Removed deprecated `@testing-library/jest-native` and updated Jest setup.
-- Ran `npm audit fix` and cleared the high-severity vulnerability.
-- Reset Watchman watch to remove recrawl warnings.
-- Updated README with CI + secret scanning badges; removed ASCII banner.
-- Added app-level ErrorBoundary with safe fallback UI and retry action.
-- Added accessibility labels/roles to interactive controls across the app.
-- Removed relationship labels (Parent/Grandparent/Sibling) from tree nodes; kept relationships for layout only.
-- Tree now re-centers focus on the tapped member; add-sibling anchors to a parent so new siblings appear in the tree.
-- Open PR: `fix/tree-focus-anchor` → `main` (merge after CI passes).
-- Planning next: Relationship wizard to add extended relatives (uncle/cousin/grandparent) via guided questions.
-- User is enrolled in the GitHub Education Benefits program.
-- Added Dependabot config for npm + GitHub Actions updates.
-- Added README note for enabling GitHub secret scanning.
+# Project State: The Vine MVP Stabilization
 
-## Files Changed (this session)
+**Last updated:** 2026-02-07
+**Current phase:** Phase 1 - Data Foundation (Complete)
+**Next action:** `/gsd:plan-phase 02` (Paywall Polish)
 
-- app/(tabs)/tree.tsx
-- app/(tabs)/\_layout.tsx
-- app/(tabs)/profile.tsx
-- app/\_layout.tsx
-- app/(auth)/login.tsx
-- app/(auth)/signup.tsx
-- app/(auth)/forgot-password.tsx
-- app/member/[id].tsx
-- app/paywall.tsx
-- src/stores/familyStore.ts
-- src/stores/subscriptionStore.ts
-- src/types/tree.ts
-- src/types/user.ts
-- src/utils/relationships.ts
-- src/utils/**tests**/relationships.test.ts
-- src/components/common/Avatar.tsx
-- src/components/common/ErrorBoundary.tsx
-- src/components/common/index.ts
-- src/components/common/Button.tsx
-- src/components/common/FeatureGate.tsx
-- src/components/common/UpgradeBanner.tsx
-- src/components/feed/FeedItem.tsx
-- src/components/feed/PromptCard.tsx
-- src/components/profile/ProfileHeader.tsx
-- src/components/tree/TreeNode.tsx
-- HANDOFF.md
-- .claude/agents/status-board.md
-- .claude/agents/updates-log.md
-- .claude/changelog.md
-- .codex/quick/006-add-member-plan/006-SUMMARY.md
-- README.md
-- CONTRIBUTING.md
-- LICENSE
-- package.json
-- package-lock.json
-- .eslintrc.js
-- .eslintignore
-- .prettierrc
-- .prettierignore
-- jest.config.js
-- jest.setup.ts
-- .github/workflows/ci.yml
-- .github/pull_request_template.md
-- .github/ISSUE_TEMPLATE/bug_report.md
-- .github/ISSUE_TEMPLATE/feature_request.md
-- .github/dependabot.yml
-- .husky/pre-commit
+## Current Position
 
-## Unrelated Local Changes
+Phase: 1 of 8 (Data Foundation)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-07 - Auth implementation + tree deterministic layout refactor (Codex)
 
-- Existing unstaged tooling changes under `.claude/mcp-local-model/` (left untouched).
+Progress: ████░░░░░░ 50%
 
-## Active Tasks
+## Project Reference
 
-- Merge PR `fix/tree-focus-anchor` after CI.
-- Define relationship wizard flow + mapping rules for extended relatives.
-- Verify add-member flow on device (spouse + parent + child + sibling + uncle/cousin) and confirm connectors remain stable.
+See: .planning/PROJECT.md (updated 2026-02-02)
 
-## Blockers
+**Core value:** Families can view, interact with, and navigate their family connections without bugs or broken flows.
+**Current focus:** Phase 1 - Data Foundation
 
-- None known (Firebase project exists; Storage still on Spark).
+## Progress
 
-## Notes
+| Phase | Name | Status | Plans | Progress |
+|-------|------|--------|-------|----------|
+| 1 | Data Foundation | ● Complete | 4/4 | 100% |
+| 2 | Paywall Polish | ○ Pending | 0/? | 0% |
+| 3 | Member Profile Modal | ○ Pending | 0/? | 0% |
+| 4 | Tree Interactions | ○ Pending | 0/? | 0% |
 
-- Canonical units live in Firestore: `families/{familyId}/units` with `partnerIds` + `childLinks`.
-- Child links support per-parent relation types: `biological`, `adopted`, `step`, `guardian`.
-- Relationships are derived on load and after writes; member docs do not store relationships.
-- Single-parent supported; only one partner at a time enforced.
-- `npm audit` is clean; watchman recrawl warnings resolved.
-- `npm install` reported deprecated packages; consider dependency refresh later.
-- Secret scanning must be enabled in GitHub settings (Repository Settings → Security & analysis).
+## Recent Commits
 
-## Relationship Wizard Plan (Most Recent)
+```
+1f2abfc fix: post-commit-sync hook — only fire for family-tree-app commits
+cb74ff0 fix: use absolute paths in project hook commands
+7ed2010 feat: priority 1 hooks — auto-HANDOFF + planning doc sync
+8769da5 docs: milestone audit v1.0 — gaps_found (15/39 requirements satisfied)
+1635975 Merge pull request #17 from eli-herman/eli-herman-patch-1
+bce7029 Document AI tools used for project development
+7d2c823 Merge pull request #16 from eli-herman/fix/tree-focus-anchor
+237a57f Merge branch 'main' into fix/tree-focus-anchor
+```
 
-1. **Question flow (simple UX)**: Who is this related to? → relationship type → clarifying parent/relative only when needed → basic details → review.
-2. **Mapping engine**: add `addRelative()` to translate high-level relations into base ops (addParent/addChild/addSibling/addSpouse).
-3. **Auto-focus**: after save, center tree on the correct anchor unit so the new member is visible immediately.
-4. **Validation**: explain missing anchors and offer to add them first.
-5. **Verification**: test parent/child/sibling + uncle/cousin/grandparent flows; confirm connectors and focus.
+## Working Tree
 
-## Student Pack Tools (Recommended)
-
-**Use now**
-
-- Sentry (crash + error tracking)
-- Doppler (secrets management)
-- 1Password (shared credentials)
-- BrowserStack (real device testing)
-- GitHub Pages (project landing page)
-
-**Next stage**
-
-- New Relic (performance/observability)
-- GitHub Codespaces (reproducible dev env)
-- Namecheap (domain + SSL)
-- Heroku (simple backend services)
+```
+clean
+```
 
 ## Next Steps
 
-1. Merge PR `fix/tree-focus-anchor`.
-2. Implement relationship wizard (guided questions → base relations).
-3. Add explicit “Add Member” entry point on the tree header (if desired).
-4. Decide if/when to allow sequential partners (divorced/widowed history).
-5. Run a quick VoiceOver/TalkBack pass to confirm labels read well.
+- Run `/gsd:progress` to see current position and next action
+- See `.planning/STATE.md` for full project state
+- See `.planning/v1.0-MILESTONE-AUDIT.md` for gap analysis (16 requirements missing)
+- Run `/gsd:plan-milestone-gaps` to create new roadmap phases
