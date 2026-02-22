@@ -1,16 +1,16 @@
 ---
 device: Elis-MacBook-Pro.local
 branch: main
-commit: 1f2abfc
-timestamp: 2026-02-21T17:37:40.711Z
+commit: cae8f2d
+timestamp: 2026-02-22T02:14:30.830Z
 ---
 # Session Handoff
 
 ## Summary
 
-Last commit: `1f2abfc` on `main`
+Last commit: `cae8f2d` on `main`
 
-> fix: post-commit-sync hook — only fire for family-tree-app commits
+> feat: SessionStart hook — inject PRIORITIES.md and lessons-learned.md
 
 # Project State: The Vine MVP Stabilization
 
@@ -46,21 +46,25 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 ## Recent Commits
 
 ```
+cae8f2d feat: SessionStart hook — inject PRIORITIES.md and lessons-learned.md
+38b6f92 feat: stop hook — append Quality Server health snapshot to HANDOFF.md
+d2180e4 chore: auto-update HANDOFF.md [1f2abfc]
 1f2abfc fix: post-commit-sync hook — only fire for family-tree-app commits
 cb74ff0 fix: use absolute paths in project hook commands
 7ed2010 feat: priority 1 hooks — auto-HANDOFF + planning doc sync
 8769da5 docs: milestone audit v1.0 — gaps_found (15/39 requirements satisfied)
 1635975 Merge pull request #17 from eli-herman/eli-herman-patch-1
-bce7029 Document AI tools used for project development
-7d2c823 Merge pull request #16 from eli-herman/fix/tree-focus-anchor
-237a57f Merge branch 'main' into fix/tree-focus-anchor
 ```
 
 ## Working Tree
 
 ```
-clean
+M HANDOFF.md
 ```
+
+## Quality Server Health
+
+**Status:** unreachable — Windows PC may be off or quality-server not running
 
 ## Next Steps
 
