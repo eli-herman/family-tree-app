@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 // Stop hook: auto-generates and commits HANDOFF.md when Claude session ends.
 // Fires on every Stop event. Fails silently — never blocks session end.
+// Appends system health snapshot from Quality Server so next session has
+// immediate situational awareness on pickup.
 
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+const QUALITY_SERVER = 'http://192.168.1.190:4000';
+const HEALTH_TIMEOUT_MS = 2000;
+
 let raw = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', (chunk) => (raw += chunk));
-process.stdin.on('end', () => {
+process.stdin.on('end', async () => {
   let input = {};
   try {
     input = JSON.parse(raw);
@@ -52,6 +57,9 @@ process.stdin.on('end', () => {
       .join('\n');
   } catch {}
 
+  // Query Quality Server health (2s timeout — fails silently if Windows is off)
+  const healthSection = await fetchHealthSection();
+
   // Build HANDOFF.md with YAML frontmatter (parsed by handoff-reader.js on next SessionStart)
   const handoff = `---
 device: ${device}
@@ -81,6 +89,8 @@ ${recentCommits}
 ${workingTree}
 \`\`\`
 
+${healthSection}
+
 ## Next Steps
 
 - Run \`/gsd:progress\` to see current position and next action
@@ -106,6 +116,39 @@ ${workingTree}
 
   process.exit(0);
 });
+
+async function fetchHealthSection() {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+
+    const res = await fetch(`${QUALITY_SERVER}/health`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      return `## Quality Server Health\n\n**Status:** degraded (HTTP ${res.status})`;
+    }
+
+    const data = await res.json();
+    const status = data.status === 'ok' ? '✓ online' : '⚠ degraded';
+    const ollama = data.services?.ollama ? '✓' : '✗';
+    const chroma = data.services?.chromadb ? '✓' : '✗';
+    const models = (data.models || [])
+      .map((m) => `${m.name} ${m.available ? '✓' : '✗'}`)
+      .join(' | ');
+
+    return `## Quality Server Health
+
+**Status:** ${status} | Ollama: ${ollama} | ChromaDB: ${chroma}
+**Models:** ${models || 'none reported'}`;
+  } catch {
+    return `## Quality Server Health
+
+**Status:** unreachable — Windows PC may be off or quality-server not running`;
+  }
+}
 
 function run(cmd) {
   try {
