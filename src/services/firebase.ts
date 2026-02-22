@@ -28,7 +28,7 @@ import { initializeAuth, getAuth, Auth } from 'firebase/auth';
 // This import has a TypeScript error because the types don't expose it, but it works at runtime
 import { getReactNativePersistence } from 'firebase/auth';
 // Firestore import for the NoSQL database
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 // Storage import for file/media uploads
 import { getStorage } from 'firebase/storage';
 // AsyncStorage is used to persist the auth session on the device between app launches
@@ -73,6 +73,17 @@ try {
 // Initialize Cloud Firestore - the NoSQL document database.
 // This is used to store and query family members, feed items, comments, prompts, etc.
 const db = getFirestore(app);
+
+// Connect to local Firestore emulator in development.
+// iOS simulator maps 'localhost' to Mac, so this works for all local dev.
+// Guards against double-connect during Expo hot-reload.
+if (__DEV__) {
+  try {
+    connectFirestoreEmulator(db, 'localhost', 8080);
+  } catch {
+    // Already connected (hot reload) — ignore
+  }
+}
 
 // Initialize Firebase Storage - the file storage service.
 // This is used to upload and serve user photos, media attachments, and profile images.
