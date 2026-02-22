@@ -1,61 +1,78 @@
 #!/usr/bin/env node
-// Reads HANDOFF.md on session start and outputs context for Claude
-// Fails silently if no HANDOFF.md exists
+// SessionStart hook: injects HANDOFF.md, dev-os PRIORITIES.md, and lessons-learned.md
+// Fails silently if files don't exist
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 const cwd = process.cwd();
-const handoffFile = path.join(cwd, 'HANDOFF.md');
+const devOsDir = path.join(os.homedir(), 'projects', 'dev-os');
+
+function readFileSilent(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    return fs.readFileSync(filePath, 'utf-8').trim();
+  } catch {
+    return null;
+  }
+}
 
 try {
-  if (!fs.existsSync(handoffFile)) {
-    // No handoff file - silent exit
-    process.exit(0);
-  }
+  const sections = [];
 
-  const content = fs.readFileSync(handoffFile, 'utf-8');
-
-  // Parse YAML frontmatter
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  let metadata = {};
-  if (frontmatterMatch) {
-    const lines = frontmatterMatch[1].split('\n');
-    for (const line of lines) {
-      const colonIdx = line.indexOf(':');
-      if (colonIdx > 0) {
-        const key = line.slice(0, colonIdx).trim();
-        const value = line.slice(colonIdx + 1).trim().replace(/^["']|["']$/g, '');
-        metadata[key] = value;
+  // --- HANDOFF.md ---
+  const handoffRaw = readFileSilent(path.join(cwd, 'HANDOFF.md'));
+  if (handoffRaw) {
+    const frontmatterMatch = handoffRaw.match(/^---\n([\s\S]*?)\n---/);
+    let metadata = {};
+    if (frontmatterMatch) {
+      for (const line of frontmatterMatch[1].split('\n')) {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx > 0) {
+          const key = line.slice(0, colonIdx).trim();
+          const value = line
+            .slice(colonIdx + 1)
+            .trim()
+            .replace(/^["']|["']$/g, '');
+          metadata[key] = value;
+        }
       }
     }
-  }
 
-  // Check freshness - warn if handoff is older than 24 hours
-  let freshnessNote = '';
-  if (metadata.timestamp) {
-    const handoffTime = new Date(metadata.timestamp);
-    const now = new Date();
-    const hoursDiff = (now - handoffTime) / (1000 * 60 * 60);
-    if (hoursDiff > 24) {
-      freshnessNote = `\n[NOTE: This handoff is ${Math.round(hoursDiff)} hours old - context may be stale]`;
+    const lines = [
+      '--- Cross-Device Handoff Context ---',
+      `Device: ${metadata.device || 'unknown'} | Branch: ${metadata.branch || 'unknown'} | Commit: ${metadata.commit || 'unknown'}`,
+      `Last updated: ${metadata.timestamp || 'unknown'}`,
+    ];
+    if (metadata.timestamp) {
+      const hoursDiff = (new Date() - new Date(metadata.timestamp)) / (1000 * 60 * 60);
+      if (hoursDiff > 24) {
+        lines.push(
+          `[NOTE: This handoff is ${Math.round(hoursDiff)} hours old - context may be stale]`,
+        );
+      }
     }
+    lines.push(handoffRaw.replace(/^---[\s\S]*?---\n/, '').trim());
+    lines.push('--- End Handoff Context ---');
+    sections.push(lines.join('\n'));
   }
 
-  // Output context for Claude to consume
-  const output = [
-    '--- Cross-Device Handoff Context ---',
-    `Device: ${metadata.device || 'unknown'} | Branch: ${metadata.branch || 'unknown'} | Commit: ${metadata.commit || 'unknown'}`,
-    `Last updated: ${metadata.timestamp || 'unknown'}`,
-    freshnessNote,
-    '',
-    content.replace(/^---[\s\S]*?---\n/, '').trim(),
-    '',
-    '--- End Handoff Context ---',
-  ].filter(Boolean).join('\n');
+  // --- PRIORITIES.md ---
+  const priorities = readFileSilent(path.join(devOsDir, 'PRIORITIES.md'));
+  if (priorities) {
+    sections.push(`--- dev-os PRIORITIES ---\n${priorities}\n--- End PRIORITIES ---`);
+  }
 
-  process.stdout.write(output);
-} catch (err) {
-  // Fail silently - don't disrupt session start
+  // --- lessons-learned.md ---
+  const lessons = readFileSilent(path.join(devOsDir, 'patterns', 'lessons-learned.md'));
+  if (lessons) {
+    sections.push(`--- Lessons Learned ---\n${lessons}\n--- End Lessons Learned ---`);
+  }
+
+  if (sections.length > 0) {
+    process.stdout.write(sections.join('\n\n'));
+  }
+} catch {
   process.exit(0);
 }
